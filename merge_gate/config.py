@@ -6,19 +6,22 @@ from pathlib import Path
 
 from .globs import Glob, compile_glob
 
-# Paths that steer CI, the gate or the agents; a project can add to them, never remove them.
-BUILTIN_CRITICAL = (
-    ".github/**",
+# Paths that steer CI or the gate; a project can add to them, never remove them.
+BUILTIN_CRITICAL = (".github/**",)
+# Agent instructions and config. A PR that edits them is never reviewed: the reviewer would load the
+# PR head's skills, commands and agents through `--add-dir`. `**/.claude` alone is a symlink, which
+# git and GitHub list as one file.
+AGENT_CONFIG = (
     "**/CLAUDE.md",
     "**/CLAUDE.local.md",
     "**/AGENTS.md",
-    ".claude/**",
+    "**/.claude",
     "**/.claude/**",
     ".mcp.json",
 )
 
 DEFAULTS = {
-    "agent_branch_prefix": "ai/",
+    "agent_branch_prefixes": ["ai/"],
     "bots": ["dependabot[bot]", "renovate[bot]"],
     "critical_paths": [],
     "test_paths": [
@@ -60,8 +63,9 @@ class ConfigError(Exception):
 @dataclass(frozen=True)
 class Config:
     owner: str
-    agent_branch_prefix: str
+    agent_branch_prefixes: tuple[str, ...]
     bots: frozenset[str]
+    agent_config: tuple[Glob, ...]
     critical: tuple[Glob, ...]
     tests: tuple[Glob, ...]
     docs: tuple[Glob, ...]
@@ -96,8 +100,9 @@ def parse_config(text: str) -> Config:
     if not isinstance(raw["owner"], str) or not raw["owner"]:
         raise ConfigError("owner must be a GitHub login")
     merged = {**DEFAULTS, **raw}
-    if not isinstance(merged["agent_branch_prefix"], str) or not merged["agent_branch_prefix"]:
-        raise ConfigError("agent_branch_prefix must be a non-empty string")
+    prefixes = tuple(_string_list(merged, "agent_branch_prefixes"))
+    if not prefixes:
+        raise ConfigError("agent_branch_prefixes must name at least one prefix")
     limit = merged["max_changed_lines"]
     if isinstance(limit, bool) or not isinstance(limit, int) or limit < 1:
         raise ConfigError("max_changed_lines must be a positive integer")
@@ -110,8 +115,9 @@ def parse_config(text: str) -> Config:
 
     return Config(
         owner=raw["owner"],
-        agent_branch_prefix=merged["agent_branch_prefix"],
+        agent_branch_prefixes=prefixes,
         bots=frozenset(_string_list(merged, "bots")),
+        agent_config=tuple(compile_glob(p, ignore_case=True) for p in AGENT_CONFIG),
         critical=globs("critical_paths", BUILTIN_CRITICAL, ignore_case=True),
         tests=globs("test_paths"),
         docs=globs("docs_paths"),

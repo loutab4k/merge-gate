@@ -97,7 +97,7 @@ def parse_dependabot_bump(title: str) -> tuple[tuple[int, int, int], tuple[int, 
 def _is_candidate(pr: PullRequest, config: Config) -> bool:
     if pr.author in config.bots:
         return True
-    return pr.author == config.owner and pr.head_ref.startswith(config.agent_branch_prefix)
+    return pr.author == config.owner and pr.head_ref.startswith(config.agent_branch_prefixes)
 
 
 def _classify(pr: PullRequest, files: list[ChangedFile], config: Config) -> tuple[ChangeClass, list[Reason]]:
@@ -126,9 +126,10 @@ def _classify(pr: PullRequest, files: list[ChangedFile], config: Config) -> tupl
 def _file_reasons(f: ChangedFile, config: Config) -> list[Reason]:
     reasons = []
     for path in {f.path, f.previous_path} - {None}:
-        glob = first_match(config.critical, path)
-        if glob is not None:
-            reasons.append(Reason(ReasonCode.CRITICAL_PATH, f"{path} matches {glob.pattern}"))
+        for code, globs in ((ReasonCode.AGENT_CONFIG, config.agent_config), (ReasonCode.CRITICAL_PATH, config.critical)):
+            glob = first_match(globs, path)
+            if glob is not None:
+                reasons.append(Reason(code, f"{path} matches {glob.pattern}"))
     was_test = f.previous_path is not None and first_match(config.tests, f.previous_path)
     if not (was_test or first_match(config.tests, f.path)):
         return reasons

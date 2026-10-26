@@ -9,7 +9,7 @@ BASE = {"version": 1, "mode": "shadow", "owner": "owner"}
 
 def test_minimal_config_gets_defaults_and_builtin_critical_paths():
     c = parse_config(json.dumps(BASE))
-    assert c.agent_branch_prefix == "ai/" and "dependabot[bot]" in c.bots
+    assert c.agent_branch_prefixes == ("ai/",) and "dependabot[bot]" in c.bots
     assert any(g.pattern == ".github/**" for g in c.critical)
 
 
@@ -39,7 +39,10 @@ def test_project_paths_add_to_builtins():
         json.dumps({**BASE, "critical_paths": [""]}),
         json.dumps({**BASE, "max_changed_lines": 0}),
         json.dumps({**BASE, "max_changed_lines": True}),
-        json.dumps({**BASE, "agent_branch_prefix": ""}),
+        json.dumps({**BASE, "agent_branch_prefix": "ai/"}),
+        json.dumps({**BASE, "agent_branch_prefixes": []}),
+        json.dumps({**BASE, "agent_branch_prefixes": [""]}),
+        json.dumps({**BASE, "agent_branch_prefixes": "ai/"}),
     ],
 )
 def test_invalid_configs_are_refused(raw):

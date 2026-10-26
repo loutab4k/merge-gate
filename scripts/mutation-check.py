@@ -12,7 +12,7 @@ from pathlib import Path
 
 SRC = Path(__file__).resolve().parent.parent
 MUTANTS = [
-    ("merge_gate/assess.py", "glob = first_match(config.critical, path)", "glob = None"),
+    ("merge_gate/assess.py", "(ReasonCode.CRITICAL_PATH, config.critical)", "(ReasonCode.CRITICAL_PATH, ())"),
     ("merge_gate/assess.py", "return pr.author == config.owner and", "return True or"),
     ("merge_gate/assess.py", "if changed_lines > config.max_changed_lines", "if changed_lines >= config.max_changed_lines"),
     ("merge_gate/assess.py", 'patch.split("\\n")', "patch.splitlines()"),
@@ -20,7 +20,17 @@ MUTANTS = [
     ("merge_gate/assess.py", "if f.status is FileStatus.REMOVED or", "if False and"),
     ("merge_gate/verdict.py", "MIN_CONFIDENCE = 8", "MIN_CONFIDENCE = 0"),
     ("merge_gate/verdict.py", 'or set(value) != set(schema["required"])', ""),
-    ("merge_gate/verdict.py", "if assessment.reasons:", "if False:"),
+    ("merge_gate/verdict.py", "assessment.reasons + _review_reasons(", "(*_review_reasons("),
+    ("merge_gate/verdict.py", "if not assessment.needs_review:", "if False:"),
+    ("merge_gate/model.py", "return all(r.code in REVIEWED_ANYWAY", "return any(r.code in REVIEWED_ANYWAY"),
+    ("merge_gate/model.py", "frozenset({ReasonCode.CRITICAL_PATH})", "frozenset(ReasonCode)"),
+    ("merge_gate/config.py", "if not prefixes:", "if False:"),
+    ("merge_gate/assess.py", "((ReasonCode.AGENT_CONFIG, config.agent_config), ", "("),
+    ("merge_gate/config.py", "compile_glob(p, ignore_case=True) for p in AGENT_CONFIG", "compile_glob(p) for p in AGENT_CONFIG"),
+    ("merge_gate/config.py", '    "**/.claude/**",\n', ""),
+    ("merge_gate/config.py", '    "**/.claude",\n', ""),
+    ("merge_gate/verdict.py", '"merge" if verdict.review.merge else "manual"', '"merge"'),
+    ("merge_gate/assess.py", "startswith(config.agent_branch_prefixes)", "startswith(config.agent_branch_prefixes[0])"),
     ("merge_gate/verdict.py", 'if not review.criteria and not deps:', "if False:"),
     ("merge_gate/verdict.py", 'return f"`{text}`" if text else "(empty)"', "return text"),
     ("merge_gate/verdict.py", "ok = isinstance(v, list) and all(", "ok = all("),

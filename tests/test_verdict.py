@@ -45,9 +45,18 @@ def test_fail_closed():
     assert decide(clean(ChangeClass.DEPS_PATCH), with_(criteria=[])).would_merge
 
 
-def test_assessment_reasons_win_over_any_review():
+def test_a_critical_path_needs_a_human_whatever_the_review_says():
     a = Assessment(pr(), ChangeClass.CODE, 10, (Reason(ReasonCode.CRITICAL_PATH, ".github/x"),))
-    assert codes(decide(a, parse_review(json.dumps(GOOD)))) == {ReasonCode.CRITICAL_PATH}
+    v = decide(a, parse_review(json.dumps(GOOD)))
+    assert codes(v) == {ReasonCode.CRITICAL_PATH} and not v.would_merge and v.review is not None
+    assert codes(decide(a, with_(verdict="manual"))) == {ReasonCode.CRITICAL_PATH, ReasonCode.REVIEW_MANUAL}
+    assert codes(decide(a, None)) == {ReasonCode.CRITICAL_PATH, ReasonCode.NO_REVIEW}
+
+
+def test_other_assessment_reasons_drop_any_review():
+    a = Assessment(pr(), ChangeClass.CODE, 10, (Reason(ReasonCode.SKIP_MARKER, "a_test.go adds t.Skip("),))
+    v = decide(a, parse_review(json.dumps(GOOD)))
+    assert codes(v) == {ReasonCode.SKIP_MARKER} and v.review is None
 
 
 def test_parse_review_rejects_anything_off_schema():
@@ -147,4 +156,9 @@ def test_comment_neutralises_model_text_and_carries_a_record():
     assert "\n# Title" not in body
     rec = json.loads(body.split("```json\n")[1].split("\n```")[0])
     assert rec == record(verdict, "https://example.test/run/1")
-    assert rec["verdict"] == "would-merge" and rec["class"] == "code"
+    assert rec["verdict"] == "would-merge" and rec["class"] == "code" and rec["review"] == "merge"
+    critical = Assessment(pr(), ChangeClass.CODE, 10, (Reason(ReasonCode.CRITICAL_PATH, ".github/x"),))
+    rec = record(decide(critical, parse_review(json.dumps(GOOD))), "")
+    assert rec["verdict"] == "manual" and rec["review"] == "merge"
+    assert record(decide(critical, with_(verdict="manual")), "")["review"] == "manual"
+    assert record(decide(critical, None), "")["review"] is None

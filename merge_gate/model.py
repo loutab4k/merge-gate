@@ -47,6 +47,7 @@ class ReasonCode(Enum):
     NOT_CANDIDATE = "not-candidate"
     CI_NOT_GREEN = "ci-not-green"
     CRITICAL_PATH = "critical-path"
+    AGENT_CONFIG = "agent-config"
     TEST_DELETED = "test-deleted"
     SKIP_MARKER = "skip-marker"
     UNINSPECTABLE_TEST = "uninspectable-test"
@@ -58,6 +59,11 @@ class ReasonCode(Enum):
     BLOCKING_FINDING = "blocking-finding"
     UNMET_CRITERION = "unmet-criterion"
     NO_CRITERIA = "no-criteria"
+
+
+# Reasons that still route the PR to a human but leave the review to run, so shadow mode measures
+# the reviewer on the riskiest PRs too.
+REVIEWED_ANYWAY = frozenset({ReasonCode.CRITICAL_PATH})
 
 
 @dataclass(frozen=True)
@@ -75,4 +81,4 @@ class Assessment:
 
     @property
     def needs_review(self) -> bool:
-        return not self.reasons
+        return all(r.code in REVIEWED_ANYWAY for r in self.reasons)

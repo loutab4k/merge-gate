@@ -121,10 +121,15 @@ class Verdict:
 
 
 def decide(assessment: Assessment, review: Review | None) -> Verdict:
-    if assessment.reasons:
-        return Verdict(assessment, review, assessment.reasons)
+    """Every assessment reason stays; a reviewed PR adds the review's own reasons."""
+    if not assessment.needs_review:
+        return Verdict(assessment, None, assessment.reasons)
+    return Verdict(assessment, review, assessment.reasons + _review_reasons(assessment, review))
+
+
+def _review_reasons(assessment: Assessment, review: Review | None) -> tuple[Reason, ...]:
     if review is None:
-        return Verdict(assessment, None, (Reason(ReasonCode.NO_REVIEW, "no valid review output"),))
+        return (Reason(ReasonCode.NO_REVIEW, "no valid review output"),)
     reasons = []
     if not review.merge:
         reasons.append(Reason(ReasonCode.REVIEW_MANUAL, "the reviewer asked for a human"))
@@ -141,7 +146,7 @@ def decide(assessment: Assessment, review: Review | None) -> Verdict:
     deps = assessment.change_class in (ChangeClass.DEPS_PATCH, ChangeClass.DEPS_OTHER)
     if not review.criteria and not deps:
         reasons.append(Reason(ReasonCode.NO_CRITERIA, "no acceptance criteria in the PR"))
-    return Verdict(assessment, review, tuple(reasons))
+    return tuple(reasons)
 
 
 def _neutral(text: str, limit: int = 600) -> str:
@@ -163,6 +168,7 @@ def record(verdict: Verdict, run_url: str) -> dict:
         "changed_lines": a.changed_lines,
         "verdict": "would-merge" if verdict.would_merge else "manual",
         "reasons": [r.code.value for r in verdict.reasons],
+        "review": ("merge" if verdict.review.merge else "manual") if verdict.review else None,
         "confidence": verdict.review.confidence if verdict.review else None,
         "run": run_url,
     }
