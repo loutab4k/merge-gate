@@ -79,7 +79,9 @@ jobs:
           GATE_REPO: ${{ job.workflow_repository }}
           GATE_SHA: ${{ job.workflow_sha }}
         run: test -n "$GATE_REPO" && test -n "$GATE_SHA" && mkdir "$RUNNER_TEMP/home" && echo "HOME=$RUNNER_TEMP/home" >> "$GITHUB_ENV"
-      # The default branch sits at the root; PR code is only read, from pr-head, never run.
+      # The default branch sits at the root; PR code is only read, from pr-head, never run. Claude
+      # loads skills, commands and agents from pr-head/.claude (--add-dir), so assess never sends a
+      # PR that edits agent config here.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false

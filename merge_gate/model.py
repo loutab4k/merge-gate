@@ -47,6 +47,7 @@ class ReasonCode(Enum):
     NOT_CANDIDATE = "not-candidate"
     CI_NOT_GREEN = "ci-not-green"
     CRITICAL_PATH = "critical-path"
+    AGENT_CONFIG = "agent-config"
     TEST_DELETED = "test-deleted"
     SKIP_MARKER = "skip-marker"
     UNINSPECTABLE_TEST = "uninspectable-test"

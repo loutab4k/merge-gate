@@ -156,4 +156,9 @@ def test_comment_neutralises_model_text_and_carries_a_record():
     assert "\n# Title" not in body
     rec = json.loads(body.split("```json\n")[1].split("\n```")[0])
     assert rec == record(verdict, "https://example.test/run/1")
-    assert rec["verdict"] == "would-merge" and rec["class"] == "code"
+    assert rec["verdict"] == "would-merge" and rec["class"] == "code" and rec["review"] == "merge"
+    critical = Assessment(pr(), ChangeClass.CODE, 10, (Reason(ReasonCode.CRITICAL_PATH, ".github/x"),))
+    rec = record(decide(critical, parse_review(json.dumps(GOOD))), "")
+    assert rec["verdict"] == "manual" and rec["review"] == "merge"
+    assert record(decide(critical, with_(verdict="manual")), "")["review"] == "manual"
+    assert record(decide(critical, None), "")["review"] is None

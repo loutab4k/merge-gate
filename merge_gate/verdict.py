@@ -168,6 +168,7 @@ def record(verdict: Verdict, run_url: str) -> dict:
         "changed_lines": a.changed_lines,
         "verdict": "would-merge" if verdict.would_merge else "manual",
         "reasons": [r.code.value for r in verdict.reasons],
+        "review": ("merge" if verdict.review.merge else "manual") if verdict.review else None,
         "confidence": verdict.review.confidence if verdict.review else None,
         "run": run_url,
     }

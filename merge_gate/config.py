@@ -6,9 +6,11 @@ from pathlib import Path
 
 from .globs import Glob, compile_glob
 
-# Paths that steer CI, the gate or the agents; a project can add to them, never remove them.
-BUILTIN_CRITICAL = (
-    ".github/**",
+# Paths that steer CI or the gate; a project can add to them, never remove them.
+BUILTIN_CRITICAL = (".github/**",)
+# Agent instructions and config. A PR that edits them is never reviewed: the reviewer would load the
+# PR head's skills, commands and agents through `--add-dir`.
+AGENT_CONFIG = (
     "**/CLAUDE.md",
     "**/CLAUDE.local.md",
     "**/AGENTS.md",
@@ -62,6 +64,7 @@ class Config:
     owner: str
     agent_branch_prefixes: tuple[str, ...]
     bots: frozenset[str]
+    agent_config: tuple[Glob, ...]
     critical: tuple[Glob, ...]
     tests: tuple[Glob, ...]
     docs: tuple[Glob, ...]
@@ -113,6 +116,7 @@ def parse_config(text: str) -> Config:
         owner=raw["owner"],
         agent_branch_prefixes=prefixes,
         bots=frozenset(_string_list(merged, "bots")),
+        agent_config=tuple(compile_glob(p, ignore_case=True) for p in AGENT_CONFIG),
         critical=globs("critical_paths", BUILTIN_CRITICAL, ignore_case=True),
         tests=globs("test_paths"),
         docs=globs("docs_paths"),

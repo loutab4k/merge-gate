@@ -32,18 +32,26 @@ def test_owner_agent_pr_with_plain_code_needs_review():
 
 
 def test_critical_paths_route_to_a_human():
+    for path in [".github/workflows/ci.yml", "billing/charge.go", ".GitHub/x.yml", "Billing/charge.go"]:
+        a = run(files=[changed(path)])
+        assert codes(a) == {ReasonCode.CRITICAL_PATH}, path
+
+
+def test_agent_config_routes_to_a_human_without_a_review():
     for path in [
-        ".github/workflows/ci.yml",
         "CLAUDE.md",
         "pkg/AGENTS.md",
+        "CLAUDE.local.md",
         ".claude/settings.json",
-        "billing/charge.go",
+        "sub/.claude/skills/x/SKILL.md",
+        ".mcp.json",
         "pkg/claude.md",
-        ".Claude/settings.json",
-        "Billing/charge.go",
+        ".Claude/commands/x.md",
     ]:
         a = run(files=[changed(path)])
-        assert ReasonCode.CRITICAL_PATH in codes(a), path
+        assert codes(a) == {ReasonCode.AGENT_CONFIG} and not a.needs_review, path
+    renamed_away = changed("notes/x.md", FileStatus.RENAMED, previous_path=".claude/agents/x.md")
+    assert not run(files=[renamed_away]).needs_review
 
 
 def test_rename_out_of_a_critical_path_counts_as_critical():
