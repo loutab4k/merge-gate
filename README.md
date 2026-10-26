@@ -43,6 +43,9 @@ The workflow and config run from the default branch, so a PR cannot change the r
 python3 -m venv .venv
 .venv/bin/pip install -r requirements-dev.txt
 .venv/bin/python -m pytest -q
+.venv/bin/python scripts/mutation-check.py
 ```
+
+The mutation check breaks each safety check in turn and fails unless a test catches it; extend it with every new check.
 
 This repository runs the gate on its own PRs through `.github/workflows/merge-gate.yml`.
