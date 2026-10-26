@@ -18,13 +18,12 @@ on:
 # (job.workflow_repository and job.workflow_sha), runs Python with -s -E so no user site or
 # PYTHON* variable can inject code, and uses a fresh HOME, so files left in the runner user's home
 # (~/.local, ~/.claude) cannot run here. A process left on a shared runner still could: use a
-# runner that never runs PR code.
-# Job timeouts are long because a self-hosted runner's job-started hook may hold a job while the
-# host is busy; each step that does the work has its own short timeout.
+# runner that never runs PR code. Each step that does the work has its own short timeout; the job
+# timeout only bounds the runner's own setup.
 jobs:
   assess:
     runs-on: ${{ inputs.runner }}
-    timeout-minutes: 360
+    timeout-minutes: 60
     permissions:
       contents: read
       pull-requests: read
@@ -68,7 +67,7 @@ jobs:
     needs: assess
     if: needs.assess.outputs.needs_review == 'true'
     runs-on: ${{ inputs.runner }}
-    timeout-minutes: 360
+    timeout-minutes: 60
     permissions:
       contents: read
       pull-requests: read
@@ -129,7 +128,7 @@ jobs:
     needs: [assess, review]
     if: ${{ !cancelled() && needs.assess.result == 'success' && needs.assess.outputs.skip == 'false' }}
     runs-on: ${{ inputs.runner }}
-    timeout-minutes: 360
+    timeout-minutes: 60
     permissions:
       contents: read
       pull-requests: write
