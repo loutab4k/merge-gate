@@ -16,8 +16,9 @@ on:
 
 # Every job checks out the gate code at the commit the caller's `uses:` resolved to
 # (job.workflow_repository and job.workflow_sha), runs Python with -s -E so no user site or
-# PYTHON* variable can inject code, and uses a fresh HOME, so state a runner keeps between jobs
-# (~/.local, ~/.claude) cannot reach the secrets here.
+# PYTHON* variable can inject code, and uses a fresh HOME, so files left in the runner user's home
+# (~/.local, ~/.claude) cannot run here. A process left on a shared runner still could: use a
+# runner that never runs PR code.
 # Job timeouts are long because a self-hosted runner's job-started hook may hold a job while the
 # host is busy; each step that does the work has its own short timeout.
 jobs:
