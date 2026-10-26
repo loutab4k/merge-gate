@@ -3,10 +3,6 @@ name: merge-gate
 on:
   workflow_call:
     inputs:
-      config:
-        description: Gate config path, read from the default branch
-        type: string
-        default: .github/merge-gate.json
       gate_ref:
         description: Ref of loutab4k/merge-gate whose code runs; keep it equal to the ref in `uses:`
         type: string
@@ -14,14 +10,20 @@ on:
       model:
         type: string
         default: claude-opus-5-5
+      runner:
+        description: Runner label for every job, such as a project's self-hosted runner
+        type: string
+        default: ubuntu-24.04
     secrets:
       claude_code_oauth_token:
         required: false
 
+# Job timeouts are long because a self-hosted runner's job-started hook may hold a job while the
+# host is busy; each step that does the work has its own short timeout.
 jobs:
   assess:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    runs-on: ${{ inputs.runner }}
+    timeout-minutes: 360
     permissions:
       contents: read
       pull-requests: read
@@ -29,11 +31,12 @@ jobs:
       skip: ${{ steps.assess.outputs.skip }}
       needs_review: ${{ steps.assess.outputs.needs_review }}
     steps:
+      # The config comes from the default branch, so a PR cannot change the rules it is judged by.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           path: base
           persist-credentials: false
-          sparse-checkout: ${{ inputs.config }}
+          sparse-checkout: .github/merge-gate.json
           sparse-checkout-cone-mode: false
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -42,10 +45,11 @@ jobs:
           path: .merge-gate
           persist-credentials: false
       - id: assess
+        timeout-minutes: 10
         working-directory: .merge-gate
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          MERGE_GATE_CONFIG: ${{ github.workspace }}/base/${{ inputs.config }}
+          MERGE_GATE_CONFIG: ${{ github.workspace }}/base/.github/merge-gate.json
         run: python3 -m merge_gate assess "$RUNNER_TEMP/merge-gate-input"
       - if: steps.assess.outputs.skip == 'false'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -57,15 +61,15 @@ jobs:
   review:
     needs: assess
     if: needs.assess.outputs.needs_review == 'true'
-    runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    runs-on: ${{ inputs.runner }}
+    timeout-minutes: 360
     permissions:
       contents: read
       pull-requests: read
     outputs:
       review_json: ${{ steps.claude.outputs.structured_output }}
     steps:
-      # The base branch sits at the root; PR code is only read, from pr-head, never run.
+      # The default branch sits at the root; PR code is only read, from pr-head, never run.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
@@ -87,27 +91,36 @@ jobs:
       - id: prompt
         working-directory: .merge-gate
         run: python3 -m merge_gate.prompt >> "$GITHUB_OUTPUT"
+      - id: bun
+        timeout-minutes: 5
+        working-directory: .merge-gate
+        run: python3 -m merge_gate.bun "$RUNNER_TEMP/bun" >> "$GITHUB_OUTPUT"
+      # dontAsk denies every call that would need approval: reads outside the working directory
+      # and pr-head (such as /proc or the runner's files) and all tools but Read, Grep and Glob.
       - id: claude
+        timeout-minutes: 30
         uses: anthropics/claude-code-action@925afb53776cf1a2b738c6bdbed37b4d4000ef13 # v1.0.262
         with:
           claude_code_oauth_token: ${{ secrets.claude_code_oauth_token }}
           github_token: ${{ github.token }}
           allowed_bots: dependabot[bot],renovate[bot]
+          path_to_bun_executable: ${{ steps.bun.outputs.path }}
           prompt: ${{ steps.prompt.outputs.prompt }}
           claude_args: >-
             --model ${{ inputs.model }}
             --effort high
+            --permission-mode dontAsk
             --add-dir pr-head
-            --allowedTools Read,Grep,Glob
-            --disallowedTools Bash,Edit,Write,NotebookEdit,WebFetch,WebSearch,Task
+            --disallowedTools Bash,Edit,Write,NotebookEdit,WebFetch,WebSearch,Task,Read(./.git/**),Read(./pr-head/.git/**)
             --json-schema '${{ steps.prompt.outputs.schema }}'
 
   report:
     needs: [assess, review]
-    if: always() && needs.assess.result == 'success' && needs.assess.outputs.skip == 'false'
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    if: ${{ !cancelled() && needs.assess.result == 'success' && needs.assess.outputs.skip == 'false' }}
+    runs-on: ${{ inputs.runner }}
+    timeout-minutes: 360
     permissions:
+      contents: read
       pull-requests: write
       issues: write
     steps:
@@ -121,7 +134,8 @@ jobs:
         with:
           name: merge-gate-input
           path: ${{ runner.temp }}/merge-gate-input
-      - working-directory: .merge-gate
+      - timeout-minutes: 10
+        working-directory: .merge-gate
         env:
           GITHUB_TOKEN: ${{ github.token }}
           REVIEW_JSON: ${{ needs.review.outputs.review_json }}

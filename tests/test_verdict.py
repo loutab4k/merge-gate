@@ -65,6 +65,12 @@ def test_parse_review_rejects_anything_off_schema():
         json.dumps({**GOOD, "criteria": [{"criterion": "x", "met": "yes", "evidence": ""}]}),
         json.dumps({**GOOD, "findings": [{"severity": "critical", "file": "", "summary": ""}]}),
         json.dumps({**GOOD, "findings": [{"severity": "nit", "summary": ""}]}),
+        json.dumps({**GOOD, "findings": {}}),
+        json.dumps({**GOOD, "findings": ""}),
+        json.dumps({**GOOD, "criteria": {}}),
+        json.dumps({**GOOD, "findings": [{"severity": "nit", "file": "", "summary": "", "real": "blocker"}]}),
+        json.dumps({**GOOD, "criteria": [{"criterion": "x", "met": True, "evidence": "", "note": ""}]}),
+        json.dumps({**GOOD, "findings": [{"severity": ["nit"], "file": "", "summary": ""}]}),
     ]:
         assert parse_review(bad) is None, bad
 
@@ -81,22 +87,62 @@ def test_parse_review_never_raises(value):
     parse_review(json.dumps(value))
 
 
-@given(st.dictionaries(st.sampled_from(sorted(GOOD)), json_value, min_size=5, max_size=5))
-def test_would_merge_only_with_a_fully_positive_review(raw):
+criterion = st.fixed_dictionaries({"criterion": st.text(max_size=5), "met": st.booleans(), "evidence": st.text(max_size=5)})
+finding = st.fixed_dictionaries(
+    {"severity": st.sampled_from(["blocker", "major", "minor", "nit"]), "file": st.text(max_size=5), "summary": st.text(max_size=5)}
+)
+valid_review = st.fixed_dictionaries(
+    {
+        "verdict": st.sampled_from(["merge", "manual"]),
+        "confidence": st.integers(0, 10),
+        "summary": st.text(max_size=10),
+        "criteria": st.lists(criterion, max_size=3),
+        "findings": st.lists(finding, max_size=3),
+    }
+)
+
+
+@given(valid_review, st.sampled_from(list(ChangeClass)))
+def test_would_merge_exactly_when_the_review_is_fully_positive(raw, change_class):
     review = parse_review(json.dumps(raw))
-    verdict = decide(clean(), review)
-    if verdict.would_merge:
-        assert review.merge and review.confidence >= 8 and review.criteria
-        assert all(c.met for c in review.criteria)
-        assert not any(f.severity in ("blocker", "major") for f in review.findings)
+    assert review is not None
+    positive = (
+        raw["verdict"] == "merge"
+        and raw["confidence"] >= 8
+        and all(c["met"] for c in raw["criteria"])
+        and not any(f["severity"] in ("blocker", "major") for f in raw["findings"])
+        and (raw["criteria"] or change_class in (ChangeClass.DEPS_PATCH, ChangeClass.DEPS_OTHER))
+    )
+    assert decide(clean(change_class), review).would_merge == bool(positive)
+
+
+@given(valid_review, st.sampled_from(["verdict", "confidence", "summary", "criteria", "findings"]), json_value)
+def test_any_off_schema_field_means_no_review(raw, key, value):
+    fits = {
+        "verdict": value in ("merge", "manual"),
+        "confidence": type(value) is int and 0 <= value <= 10,
+        "summary": isinstance(value, str),
+        # Random JSON almost never builds an item with the exact keys, so only [] fits.
+        "criteria": value == [],
+        "findings": value == [],
+    }[key]
+    assert (parse_review(json.dumps({**raw, key: value})) is not None) == fits
 
 
 def test_comment_neutralises_model_text_and_carries_a_record():
-    hostile = with_(summary="@owner <img src=x> ```merge```", findings=[{"severity": "nit", "file": "<a>", "summary": "@x"}])
+    hostile = with_(
+        summary="@owner <img src=x> ```merge``` ![ok](https://evil.test/p.png?d=1) [x](https://evil.test)\n\n# Title",
+        findings=[{"severity": "nit", "file": "<a>", "summary": "@x other/repo#1"}],
+    )
     verdict = decide(clean(), hostile)
     body = render_comment(verdict, "https://example.test/run/1")
     assert body.startswith(MARKER)
-    assert "@owner" not in body and "<img" not in body and "<a>" not in body
+    # Every model-written text sits inside one inline code span that nothing can close.
+    for line in body.split("\n"):
+        if "evil.test" in line or "@owner" in line or "@x" in line or "<a>" in line:
+            span = line.split(": ", 1)[1]
+            assert span.startswith("`") and span.endswith("`") and span.count("`") == 2, line
+    assert "\n# Title" not in body
     rec = json.loads(body.split("```json\n")[1].split("\n```")[0])
     assert rec == record(verdict, "https://example.test/run/1")
     assert rec["verdict"] == "would-merge" and rec["class"] == "code"

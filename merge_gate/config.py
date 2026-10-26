@@ -1,4 +1,4 @@
-"""The project's `.github/merge-gate.json`, read from the base branch and validated once here."""
+"""The project's `.github/merge-gate.json`, read from the default branch and validated once here."""
 
 import json
 from dataclasses import dataclass
@@ -30,6 +30,7 @@ DEFAULTS = {
         "**/tests/**",
         "**/__tests__/**",
         "**/testdata/**",
+        "**/conftest.py",
     ],
     "docs_paths": ["**/*.md", "docs/**"],
     "dependency_files": [
@@ -88,7 +89,7 @@ def parse_config(text: str) -> Config:
     unknown = sorted(set(raw) - set(REQUIRED) - set(DEFAULTS))
     if unknown:
         raise ConfigError(f"unknown keys: {', '.join(unknown)}")
-    if raw["version"] != 1:
+    if type(raw["version"]) is not int or raw["version"] != 1:
         raise ConfigError("version must be 1")
     if raw["mode"] != "shadow":
         raise ConfigError('mode must be "shadow" (this gate never merges yet)')
@@ -101,14 +102,17 @@ def parse_config(text: str) -> Config:
     if isinstance(limit, bool) or not isinstance(limit, int) or limit < 1:
         raise ConfigError("max_changed_lines must be a positive integer")
 
-    def globs(key: str, extra: tuple[str, ...] = ()) -> tuple[Glob, ...]:
-        return tuple(compile_glob(p) for p in (*extra, *_string_list(merged, key)))
+    def globs(key: str, extra: tuple[str, ...] = (), ignore_case: bool = False) -> tuple[Glob, ...]:
+        try:
+            return tuple(compile_glob(p, ignore_case) for p in (*extra, *_string_list(merged, key)))
+        except ValueError as e:
+            raise ConfigError(f"{key}: {e}") from e
 
     return Config(
         owner=raw["owner"],
         agent_branch_prefix=merged["agent_branch_prefix"],
         bots=frozenset(_string_list(merged, "bots")),
-        critical=globs("critical_paths", BUILTIN_CRITICAL),
+        critical=globs("critical_paths", BUILTIN_CRITICAL, ignore_case=True),
         tests=globs("test_paths"),
         docs=globs("docs_paths"),
         dependency_files=globs("dependency_files"),

@@ -48,8 +48,10 @@ def _assessment_from_json(text: str) -> Assessment:
 def cmd_assess(out_dir: Path) -> int:
     event = json.loads(Path(os.environ["GITHUB_EVENT_PATH"]).read_text())
     run = event["workflow_run"]
-    if run["event"] != "pull_request":
-        print(f"merge-gate: upstream run came from {run['event']}, not a pull request; nothing to do")
+    # A project's CI may run on pull_request or, like Vinipuch, on every branch push; the PR is
+    # found by the run's head commit either way.
+    if run["event"] not in ("pull_request", "push"):
+        print(f"merge-gate: upstream run came from {run['event']}; nothing to do")
         _set_output(skip="true", needs_review="false")
         return 0
     try:
@@ -60,11 +62,10 @@ def cmd_assess(out_dir: Path) -> int:
     gh = GitHub.from_env()
     pr = gh.open_same_repo_pr(run["head_sha"])
     if pr is None:
-        print("merge-gate: no open same-repository PR has this head; fork, closed or moved on")
+        print("merge-gate: no open same-repository PR has this head; fork, not opened yet, closed or moved on")
         _set_output(skip="true", needs_review="false")
         return 0
-    files, complete = gh.changed_files(pr.number)
-    a = assess(pr, files, run["conclusion"] == "success", complete, config)
+    a = assess(pr, gh.changed_files(pr.number), run["conclusion"] == "success", config)
     out_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / "assessment.json").write_text(_assessment_to_json(a))
     if a.needs_review:
@@ -73,7 +74,7 @@ def cmd_assess(out_dir: Path) -> int:
             UNTRUSTED_NOTE + f"Title: {pr.title}\n\n{gh.pr_body(pr.number)}\n"
         )
     print(f"merge-gate: PR #{pr.number} class {a.change_class.value}, {len(a.reasons)} reasons")
-    _set_output(skip="false", needs_review="true" if a.needs_review else "false", pr=str(pr.number))
+    _set_output(skip="false", needs_review="true" if a.needs_review else "false")
     return 0
 
 

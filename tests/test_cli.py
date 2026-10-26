@@ -80,8 +80,9 @@ def assess_routes(pulls):
     }
 
 
-def test_assess_writes_inputs_for_a_candidate(env, monkeypatch):
-    work, out = env()
+@pytest.mark.parametrize("event", ["pull_request", "push"])
+def test_assess_writes_inputs_for_a_candidate(env, monkeypatch, event):
+    work, out = env(event=event)
     use(monkeypatch, FakeGitHub(assess_routes([pr_json()])))
     assert cli.main(["x", "assess", str(work)]) == 0
     assert "needs_review=true" in out.read_text()
@@ -89,8 +90,8 @@ def test_assess_writes_inputs_for_a_candidate(env, monkeypatch):
     assert (work / "pr.md").read_text().startswith(cli.UNTRUSTED_NOTE)
 
 
-def test_assess_skips_non_pr_runs_and_forks(env, monkeypatch):
-    work, out = env(event="push")
+def test_assess_skips_other_runs_and_forks(env, monkeypatch):
+    work, out = env(event="schedule")
     use(monkeypatch, FakeGitHub({}))
     assert cli.main(["x", "assess", str(work)]) == 0 and "skip=true" in out.read_text()
 

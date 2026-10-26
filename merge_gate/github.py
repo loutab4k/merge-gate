@@ -6,6 +6,7 @@ import urllib.request
 
 from .model import ChangedFile, FileStatus, PullRequest
 
+# GitHub lists at most this many files of a PR; assess refuses far fewer.
 MAX_LISTED_FILES = 3000
 COMMENT_AUTHOR = "github-actions[bot]"
 
@@ -76,9 +77,8 @@ class GitHub:
     def pr_body(self, number: int) -> str:
         return self._get(f"/pulls/{number}")["body"] or ""
 
-    def changed_files(self, number: int) -> tuple[list[ChangedFile], bool]:
-        raw = self._pages(f"/pulls/{number}/files", MAX_LISTED_FILES)
-        files = [
+    def changed_files(self, number: int) -> list[ChangedFile]:
+        return [
             ChangedFile(
                 path=f["filename"],
                 previous_path=f.get("previous_filename"),
@@ -87,9 +87,8 @@ class GitHub:
                 deletions=f["deletions"],
                 patch=f.get("patch"),
             )
-            for f in raw
+            for f in self._pages(f"/pulls/{number}/files", MAX_LISTED_FILES)
         ]
-        return files, len(raw) < MAX_LISTED_FILES
 
     def diff(self, number: int) -> str:
         return self._request("GET", f"/pulls/{number}", accept="application/vnd.github.diff").decode(

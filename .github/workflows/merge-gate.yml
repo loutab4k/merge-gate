@@ -12,11 +12,12 @@ permissions:
   issues: write
 
 concurrency:
-  group: merge-gate-${{ github.event.workflow_run.head_branch }}
+  group: merge-gate-${{ github.event.workflow_run.head_repository.full_name }}-${{ github.event.workflow_run.head_branch }}
   cancel-in-progress: true
 
 jobs:
   gate:
+    if: github.event.workflow_run.head_repository.full_name == github.repository
     uses: ./.github/workflows/gate.yml
     with:
       gate_ref: main

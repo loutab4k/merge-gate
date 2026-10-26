@@ -71,32 +71,42 @@ class Review:
     findings: tuple[Finding, ...]
 
 
+def _object(value, schema: dict) -> bool:
+    """`value` is a JSON object with exactly the schema's keys, each of its declared type or enum."""
+    if not isinstance(value, dict) or set(value) != set(schema["required"]):
+        return False
+    for key, spec in schema["properties"].items():
+        v = value[key]
+        if "enum" in spec:
+            ok = isinstance(v, str) and v in spec["enum"]
+        elif spec["type"] == "string":
+            ok = isinstance(v, str)
+        elif spec["type"] == "boolean":
+            ok = isinstance(v, bool)
+        elif spec["type"] == "integer":
+            ok = type(v) is int and spec["minimum"] <= v <= spec["maximum"]
+        else:
+            ok = isinstance(v, list) and all(_object(item, spec["items"]) for item in v)
+        if not ok:
+            return False
+    return True
+
+
 def parse_review(text: str) -> Review | None:
     """Anything that does not fit the schema exactly counts as no review."""
     try:
         raw = json.loads(text)
-        if not isinstance(raw, dict) or set(raw) != set(REVIEW_SCHEMA["required"]):
-            return None
-        confidence = raw["confidence"]
-        if raw["verdict"] not in ("merge", "manual") or isinstance(confidence, bool):
-            return None
-        if not isinstance(confidence, int) or not 0 <= confidence <= 10:
-            return None
-        if not isinstance(raw["summary"], str):
-            return None
-        criteria = tuple(
-            Criterion(c["criterion"], c["met"], c["evidence"]) for c in raw["criteria"]
-        )
-        findings = tuple(Finding(f["severity"], f["file"], f["summary"]) for f in raw["findings"])
-    except (json.JSONDecodeError, KeyError, TypeError):
+    except json.JSONDecodeError:
         return None
-    for c in criteria:
-        if not (isinstance(c.text, str) and isinstance(c.met, bool) and isinstance(c.evidence, str)):
-            return None
-    for f in findings:
-        if f.severity not in SEVERITIES or not (isinstance(f.file, str) and isinstance(f.summary, str)):
-            return None
-    return Review(raw["verdict"] == "merge", confidence, raw["summary"], criteria, findings)
+    if not _object(raw, REVIEW_SCHEMA):
+        return None
+    return Review(
+        merge=raw["verdict"] == "merge",
+        confidence=raw["confidence"],
+        summary=raw["summary"],
+        criteria=tuple(Criterion(c["criterion"], c["met"], c["evidence"]) for c in raw["criteria"]),
+        findings=tuple(Finding(f["severity"], f["file"], f["summary"]) for f in raw["findings"]),
+    )
 
 
 @dataclass(frozen=True)
@@ -135,15 +145,10 @@ def decide(assessment: Assessment, review: Review | None) -> Verdict:
 
 
 def _neutral(text: str, limit: int = 600) -> str:
-    """Model and PR text shown in the comment: no mentions, no HTML, no layout breaks."""
-    text = " ".join(text.split())[:limit]
-    return (
-        text.replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-        .replace("@", "@\u200b")
-        .replace("`", "'")
-    )
+    """Model and PR text as one inline code span: GitHub renders no link, image, HTML, mention or
+    reference inside it, so injected text can neither ping anyone nor load a URL that leaks data."""
+    text = " ".join(text.split())[:limit].replace("`", "'")
+    return f"`{text}`" if text else "(empty)"
 
 
 def record(verdict: Verdict, run_url: str) -> dict:
@@ -183,7 +188,7 @@ def render_comment(verdict: Verdict, run_url: str) -> str:
             f"- {'met' if c.met else 'NOT met'}: {_neutral(c.text, 200)} ({_neutral(c.evidence, 200)})"
             for c in r.criteria
         ]
-        lines += [f"- {f.severity} `{_neutral(f.file, 120)}`: {_neutral(f.summary, 300)}" for f in r.findings]
+        lines += [f"- {f.severity} {_neutral(f.file, 120)}: {_neutral(f.summary, 300)}" for f in r.findings]
     lines += [
         "",
         "<details><summary>record</summary>",

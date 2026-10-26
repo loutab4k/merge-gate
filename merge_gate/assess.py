@@ -15,28 +15,50 @@ from .model import (
     ReasonCode,
 )
 
-# Added lines containing one of these in a test file disable or narrow tests. A false hit only
-# sends the PR to a human, so plain substrings are enough.
+# Added lines containing one of these in a test file disable, narrow or stop collecting tests.
+# A false hit only sends the PR to a human, so plain substrings are enough.
 SKIP_MARKERS = (
-    "t.Skip(",
-    "t.Skipf(",
-    "t.SkipNow(",
-    "@pytest.mark.skip",
-    "@pytest.mark.xfail",
+    # Go
+    ".Skip(",
+    ".Skipf(",
+    ".SkipNow(",
+    "//go:build ignore",
+    "// +build ignore",
+    # Python
+    "pytest.mark.skip",
+    "pytest.mark.xfail",
     "pytest.skip(",
-    "@unittest.skip",
-    "@unittest.expectedFailure",
+    "pytest.xfail(",
+    "pytest.importorskip(",
+    "unittest.skip",
+    "SkipTest",
+    "skipTest(",
+    "expectedFailure",
+    "collect_ignore",
+    # JavaScript and TypeScript
     ".skip(",
+    ".skip.",
+    ".skipIf(",
     ".only(",
+    ".only.",
     ".todo(",
     ".fails(",
-    "xit(",
-    "xdescribe(",
-    "xtest(",
+    # Rust
     "#[ignore",
 )
+# Focus and skip functions, matched only as a whole name: `xit(` must not hit `exit(`, nor `fit(` `model.fit(`.
+SKIP_FUNCTIONS = ("xit(", "xdescribe(", "xtest(", "fit(", "fdescribe(")
+_SKIP = re.compile(
+    "|".join(
+        [re.escape(m) for m in SKIP_MARKERS]
+        + [r"(?<![\w.$])" + re.escape(f) for f in SKIP_FUNCTIONS]
+    )
+)
 
-_SEMVER = r"v?(\d{1,9})\.(\d{1,9})\.(\d{1,9})"
+# GitHub's diff media type refuses a PR with more files than this (HTTP 406).
+MAX_DIFF_FILES = 300
+
+_SEMVER = r"v?([0-9]{1,9})\.([0-9]{1,9})\.([0-9]{1,9})"
 # Dependabot's single-dependency title, optionally behind a conventional-commit prefix.
 _DEPENDABOT_TITLE = re.compile(
     r"(?:[a-z]+(?:\([A-Za-z0-9_./-]+\))?: )?[Bb]ump (\S+) from "
@@ -57,9 +79,9 @@ def added_lines(patch: str) -> Iterator[str]:
 
 def skip_marker_in(patch: str) -> str | None:
     for line in added_lines(patch):
-        for marker in SKIP_MARKERS:
-            if marker in line:
-                return marker
+        m = _SKIP.search(line)
+        if m is not None:
+            return m.group()
     return None
 
 
@@ -106,14 +128,13 @@ def _file_reasons(f: ChangedFile, config: Config) -> list[Reason]:
         glob = first_match(config.critical, path)
         if glob is not None:
             reasons.append(Reason(ReasonCode.CRITICAL_PATH, f"{path} matches {glob.pattern}"))
-    if not first_match(config.tests, f.path) and not (
-        f.previous_path and first_match(config.tests, f.previous_path)
-    ):
+    was_test = f.previous_path is not None and first_match(config.tests, f.previous_path)
+    if not (was_test or first_match(config.tests, f.path)):
         return reasons
-    if f.status is FileStatus.REMOVED or (
-        f.status is FileStatus.RENAMED and not first_match(config.tests, f.path)
-    ):
-        reasons.append(Reason(ReasonCode.TEST_DELETED, f.previous_path or f.path))
+    # A renamed test can stop being collected while still matching test_paths
+    # (tests/test_a.py -> tests/a_cases.py, x_test.go -> testdata/x_test.go), so any rename counts.
+    if f.status is FileStatus.REMOVED or (f.status is FileStatus.RENAMED and was_test):
+        reasons.append(Reason(ReasonCode.TEST_DELETED, f"{f.previous_path or f.path} {f.status.value}"))
     elif f.patch is None and f.additions > 0:
         reasons.append(Reason(ReasonCode.UNINSPECTABLE_TEST, f"{f.path}: GitHub returned no patch"))
     elif f.patch is not None:
@@ -127,7 +148,6 @@ def assess(
     pr: PullRequest,
     files: list[ChangedFile],
     ci_green: bool,
-    files_complete: bool,
     config: Config,
 ) -> Assessment:
     changed_lines = sum(f.additions + f.deletions for f in files)
@@ -140,8 +160,8 @@ def assess(
         )
     if not ci_green:
         reasons.append(Reason(ReasonCode.CI_NOT_GREEN, "the CI run did not succeed"))
-    if not files_complete:
-        reasons.append(Reason(ReasonCode.TOO_LARGE, "GitHub lists at most 3000 files"))
+    if len(files) > MAX_DIFF_FILES:
+        reasons.append(Reason(ReasonCode.TOO_LARGE, f"{len(files)} files > {MAX_DIFF_FILES}"))
     if changed_lines > config.max_changed_lines:
         reasons.append(
             Reason(ReasonCode.TOO_LARGE, f"{changed_lines} changed lines > {config.max_changed_lines}")

@@ -1,4 +1,4 @@
-# Copy to .github/workflows/merge-gate.yml and set `workflows:` to the name of the project's CI workflow.
+# Copy to .github/workflows/merge-gate.yml and set `workflows:` to the `name:` of the project's CI workflow.
 name: merge-gate
 
 on:
@@ -12,12 +12,17 @@ permissions:
   pull-requests: write
   issues: write
 
+# Keyed on the head repository too, so a fork branch with the same name cannot cancel this run.
 concurrency:
-  group: merge-gate-${{ github.event.workflow_run.head_branch }}
+  group: merge-gate-${{ github.event.workflow_run.head_repository.full_name }}-${{ github.event.workflow_run.head_branch }}
   cancel-in-progress: true
 
 jobs:
   gate:
+    # Fork PRs are never candidates; skip them before any runner starts.
+    if: github.event.workflow_run.head_repository.full_name == github.repository
     uses: loutab4k/merge-gate/.github/workflows/gate.yml@v1
+    # with:
+    #   runner: my-self-hosted-label
     secrets:
       claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}

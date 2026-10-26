@@ -1,9 +1,10 @@
+import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
 from merge_gate.globs import compile_glob
 
-segment = st.text(st.characters(blacklist_characters="/*?\x00"), min_size=1, max_size=8)
+segment = st.text(st.characters(blacklist_characters="/*?\x00{}[]!"), min_size=1, max_size=8)
 path = st.lists(segment, min_size=1, max_size=5).map("/".join)
 any_text = st.text(max_size=30)
 
@@ -31,8 +32,12 @@ def test_trailing_double_star_matches_everything_below(top, rest):
 
 
 @given(any_text, any_text)
-def test_any_pattern_compiles_and_matches_without_error(pattern, candidate):
-    compile_glob(pattern).matches(candidate)
+def test_any_pattern_compiles_or_is_refused_and_matches_without_error(pattern, candidate):
+    try:
+        glob = compile_glob(pattern)
+    except ValueError:
+        return
+    glob.matches(candidate)
 
 
 def test_examples():
@@ -44,4 +49,9 @@ def test_examples():
     assert compile_glob("**/*_test.go").matches("pkg/x/y_test.go")
     assert not compile_glob("**/*_test.go").matches("pkg/x/y_test.go.bak")
     assert not compile_glob("a.b").matches("axb")
-    assert not compile_glob("[ab]").matches("a")
+    assert compile_glob("**/claude.md", ignore_case=True).matches("pkg/CLAUDE.md")
+    assert compile_glob(".claude/**", ignore_case=True).matches(".Claude/settings.json")
+    assert not compile_glob("**/claude.md").matches("pkg/CLAUDE.md")
+    for dialect in ["/billing/**", "billing/", "!x", "**/*.{a,b}", "[ab]"]:
+        with pytest.raises(ValueError):
+            compile_glob(dialect)
