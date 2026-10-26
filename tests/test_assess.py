@@ -1,8 +1,10 @@
+import json
+
 from hypothesis import given
 from hypothesis import strategies as st
 
 from merge_gate.assess import SKIP_FUNCTIONS, SKIP_MARKERS, assess, parse_dependabot_bump, skip_marker_in
-from merge_gate.config import BUILTIN_CRITICAL
+from merge_gate.config import BUILTIN_CRITICAL, parse_config
 from merge_gate.globs import compile_glob
 from merge_gate.model import ChangeClass, FileStatus, ReasonCode
 
@@ -11,6 +13,9 @@ from .helpers import CONFIG, changed, pr
 clean_line = st.text(st.characters(blacklist_characters="\n\r"), max_size=40).filter(
     lambda s: skip_marker_in(f"+{s} ") is None
 )
+
+
+BASE_CONFIG = {"version": 1, "mode": "shadow", "owner": "owner"}
 
 
 def codes(a):
@@ -158,7 +163,20 @@ critical_path = st.sampled_from(BUILTIN_CRITICAL + ("billing/**",)).map(
 
 
 @given(critical_path, st.lists(st.sampled_from(["src/a.go", "README.md", "a_test.go"]), max_size=3))
-def test_any_critical_file_blocks_review(critical, others):
+def test_any_critical_file_routes_to_a_human_and_is_still_reviewed(critical, others):
     assert any(compile_glob(g).matches(critical) for g in BUILTIN_CRITICAL + ("billing/**",))
     a = run(files=[changed(p) for p in [*others, critical]])
-    assert not a.needs_review and ReasonCode.CRITICAL_PATH in codes(a)
+    assert a.needs_review and codes(a) == {ReasonCode.CRITICAL_PATH}
+
+
+def test_a_critical_path_with_another_reason_is_not_reviewed():
+    assert not run(pr(draft=True), files=[changed("billing/charge.go")]).needs_review
+    assert not run(files=[changed("billing/charge.go")], ci_green=False).needs_review
+    assert not run(files=[changed("billing/charge.go"), changed("x_test.go", FileStatus.REMOVED)]).needs_review
+
+
+def test_every_configured_branch_prefix_makes_a_candidate():
+    config = parse_config(json.dumps({**BASE_CONFIG, "agent_branch_prefixes": ["ai/", "claude/"]}))
+    for ref in ["ai/x", "claude/project-thread-1"]:
+        assert assess(pr(head_ref=ref), [changed("src/app.go")], True, config).needs_review, ref
+    assert not assess(pr(head_ref="feature/x"), [changed("src/app.go")], True, config).needs_review

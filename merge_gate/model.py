@@ -60,6 +60,11 @@ class ReasonCode(Enum):
     NO_CRITERIA = "no-criteria"
 
 
+# Reasons that still route the PR to a human but leave the review to run, so shadow mode measures
+# the reviewer on the riskiest PRs too.
+REVIEWED_ANYWAY = frozenset({ReasonCode.CRITICAL_PATH})
+
+
 @dataclass(frozen=True)
 class Reason:
     code: ReasonCode
@@ -75,4 +80,4 @@ class Assessment:
 
     @property
     def needs_review(self) -> bool:
-        return not self.reasons
+        return all(r.code in REVIEWED_ANYWAY for r in self.reasons)

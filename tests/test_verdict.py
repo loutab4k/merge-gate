@@ -45,9 +45,18 @@ def test_fail_closed():
     assert decide(clean(ChangeClass.DEPS_PATCH), with_(criteria=[])).would_merge
 
 
-def test_assessment_reasons_win_over_any_review():
+def test_a_critical_path_needs_a_human_whatever_the_review_says():
     a = Assessment(pr(), ChangeClass.CODE, 10, (Reason(ReasonCode.CRITICAL_PATH, ".github/x"),))
-    assert codes(decide(a, parse_review(json.dumps(GOOD)))) == {ReasonCode.CRITICAL_PATH}
+    v = decide(a, parse_review(json.dumps(GOOD)))
+    assert codes(v) == {ReasonCode.CRITICAL_PATH} and not v.would_merge and v.review is not None
+    assert codes(decide(a, with_(verdict="manual"))) == {ReasonCode.CRITICAL_PATH, ReasonCode.REVIEW_MANUAL}
+    assert codes(decide(a, None)) == {ReasonCode.CRITICAL_PATH, ReasonCode.NO_REVIEW}
+
+
+def test_other_assessment_reasons_drop_any_review():
+    a = Assessment(pr(), ChangeClass.CODE, 10, (Reason(ReasonCode.SKIP_MARKER, "a_test.go adds t.Skip("),))
+    v = decide(a, parse_review(json.dumps(GOOD)))
+    assert codes(v) == {ReasonCode.SKIP_MARKER} and v.review is None
 
 
 def test_parse_review_rejects_anything_off_schema():

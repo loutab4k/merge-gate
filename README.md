@@ -6,9 +6,9 @@ A reusable GitHub workflow that decides whether a pull request could merge witho
 
 After the project's CI finishes on a PR's head commit (CI triggered by `pull_request` or by a branch `push`), the gate runs three jobs:
 
-1. **assess** (deterministic, no PR code runs). The PR must come from this repository (fork PRs get no run and no comment), be open and not a draft, and come from the owner on an `ai/` branch or from Dependabot or Renovate. CI must be green. The diff must stay under the size cap (800 changed lines, 300 files). It must not touch a critical path, delete or rename a test file, or add a test-skip marker such as `t.Skip(`, `self.skipTest(`, `//go:build ignore` or `it.only(`. Any failure routes the PR to a human, and no model runs.
-2. **review** (only when assess found nothing). Claude reads the diff, the PR head and the default branch with Read, Grep and Glob, and cannot read outside them. It treats the PR description as unverified claims, checks each acceptance criterion against the diff, and returns a JSON verdict. The job's GitHub token is read-only.
-3. **report**. A pure function combines both results. The verdict is "would merge" only when the review says merge with confidence 8 or more, every criterion is met, nothing is `blocker` or `major`, and a PR other than a dependency bump has criteria at all. A missing or malformed review means "needs a human". The verdict goes into one comment per PR, edited on each run, with a JSON record at the end. Model-written text appears only as inline code, so it cannot mention anyone or load a link.
+1. **assess** (deterministic, no PR code runs). The PR must come from this repository (fork PRs get no run and no comment), be open and not a draft, and come from the owner on an agent branch (`ai/` by default) or from Dependabot or Renovate. CI must be green. The diff must stay under the size cap (800 changed lines, 300 files). It must not touch a critical path, delete or rename a test file, or add a test-skip marker such as `t.Skip(`, `self.skipTest(`, `//go:build ignore` or `it.only(`. Any failure routes the PR to a human. A critical path alone still gets the review, so shadow mode measures the reviewer on the riskiest PRs too; any other failure means no model runs.
+2. **review** (when assess found nothing, or only critical paths). Claude reads the diff, the PR head and the default branch with Read, Grep and Glob, and cannot read outside them. It treats the PR description as unverified claims, checks each acceptance criterion against the diff, and returns a JSON verdict. The job's GitHub token is read-only.
+3. **report**. A pure function combines both results. A critical path is always "needs a human", whatever the review says. Otherwise the verdict is "would merge" only when the review says merge with confidence 8 or more, every criterion is met, nothing is `blocker` or `major`, and a PR other than a dependency bump has criteria at all. A missing or malformed review means "needs a human". The verdict goes into one comment per PR, edited on each run, with a JSON record at the end. Model-written text appears only as inline code, so it cannot mention anyone or load a link.
 
 Critical paths always include `.github/**`, `.claude/**`, `.mcp.json`, and `CLAUDE.md`, `CLAUDE.local.md`, `AGENTS.md` and `.claude/` at any depth; they match ignoring case. A project adds its own.
 
@@ -32,7 +32,7 @@ Everything a PR supplies is untrusted: file contents, paths, the diff, the title
    }
    ```
 
-   Optional keys, with their defaults in [`merge_gate/config.py`](merge_gate/config.py): `agent_branch_prefix`, `bots`, `test_paths`, `docs_paths`, `dependency_files`, `max_changed_lines`. Unknown keys are an error.
+   Optional keys, with their defaults in [`merge_gate/config.py`](merge_gate/config.py): `agent_branch_prefixes` (a list), `bots`, `test_paths`, `docs_paths`, `dependency_files`, `max_changed_lines`. Unknown keys are an error.
 3. Add the repository secret `CLAUDE_CODE_OAUTH_TOKEN` (from `claude setup-token`). Without it, or once it expires, every review fails and every verdict is "needs a human"; replace it with a new one then.
 
 The workflow and config run from the default branch, so a PR cannot change the rules it is judged by.

@@ -97,7 +97,7 @@ def parse_dependabot_bump(title: str) -> tuple[tuple[int, int, int], tuple[int, 
 def _is_candidate(pr: PullRequest, config: Config) -> bool:
     if pr.author in config.bots:
         return True
-    return pr.author == config.owner and pr.head_ref.startswith(config.agent_branch_prefix)
+    return pr.author == config.owner and pr.head_ref.startswith(config.agent_branch_prefixes)
 
 
 def _classify(pr: PullRequest, files: list[ChangedFile], config: Config) -> tuple[ChangeClass, list[Reason]]:
