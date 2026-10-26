@@ -52,6 +52,6 @@ def test_examples():
     assert compile_glob("**/claude.md", ignore_case=True).matches("pkg/CLAUDE.md")
     assert compile_glob(".claude/**", ignore_case=True).matches(".Claude/settings.json")
     assert not compile_glob("**/claude.md").matches("pkg/CLAUDE.md")
-    for dialect in ["/billing/**", "billing/", "!x", "**/*.{a,b}", "[ab]"]:
+    for dialect in ["/billing/**", "./src/**", "billing/", "!x", "**/*.{a,b}", "[ab]"]:
         with pytest.raises(ValueError):
             compile_glob(dialect)

@@ -19,10 +19,10 @@ class Glob:
 
 def compile_glob(pattern: str, ignore_case: bool = False) -> Glob:
     """Refuses patterns written for other glob dialects, which would silently never match."""
-    if pattern.startswith(("/", "!")) or pattern.endswith("/") or any(c in pattern for c in "{}[]"):
+    if pattern.startswith(("/", "!", "./")) or pattern.endswith("/") or any(c in pattern for c in "{}[]"):
         raise ValueError(
-            f"{pattern!r}: write a path relative to the repository root, without a leading or "
-            "trailing /, !, {} or []; a directory is dir/**"
+            f"{pattern!r}: write a path relative to the repository root, without a leading ./, / "
+            "or !, a trailing /, {} or []; a directory is dir/**"
         )
     out: list[str] = []
     i = 0

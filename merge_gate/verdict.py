@@ -96,7 +96,7 @@ def parse_review(text: str) -> Review | None:
     """Anything that does not fit the schema exactly counts as no review."""
     try:
         raw = json.loads(text)
-    except json.JSONDecodeError:
+    except (ValueError, RecursionError):  # JSONDecodeError, an over-long integer, deep nesting
         return None
     if not _object(raw, REVIEW_SCHEMA):
         return None

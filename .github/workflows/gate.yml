@@ -3,21 +3,21 @@ name: merge-gate
 on:
   workflow_call:
     inputs:
-      gate_ref:
-        description: Ref of loutab4k/merge-gate whose code runs; keep it equal to the ref in `uses:`
-        type: string
-        default: v1
       model:
         type: string
         default: claude-opus-5-5
       runner:
-        description: Runner label for every job, such as a project's self-hosted runner
+        description: Runner label for every job; on a self-hosted runner, one that never runs PR code
         type: string
         default: ubuntu-24.04
     secrets:
       claude_code_oauth_token:
         required: false
 
+# Every job checks out the gate code at the commit the caller's `uses:` resolved to
+# (job.workflow_repository and job.workflow_sha), runs Python with -s -E so no user site or
+# PYTHON* variable can inject code, and uses a fresh HOME, so state a runner keeps between jobs
+# (~/.local, ~/.claude) cannot reach the secrets here.
 # Job timeouts are long because a self-hosted runner's job-started hook may hold a job while the
 # host is busy; each step that does the work has its own short timeout.
 jobs:
@@ -31,6 +31,11 @@ jobs:
       skip: ${{ steps.assess.outputs.skip }}
       needs_review: ${{ steps.assess.outputs.needs_review }}
     steps:
+      - name: Gate identity and a fresh HOME
+        env:
+          GATE_REPO: ${{ job.workflow_repository }}
+          GATE_SHA: ${{ job.workflow_sha }}
+        run: test -n "$GATE_REPO" && test -n "$GATE_SHA" && mkdir "$RUNNER_TEMP/home" && echo "HOME=$RUNNER_TEMP/home" >> "$GITHUB_ENV"
       # The config comes from the default branch, so a PR cannot change the rules it is judged by.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -40,8 +45,8 @@ jobs:
           sparse-checkout-cone-mode: false
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          repository: loutab4k/merge-gate
-          ref: ${{ inputs.gate_ref }}
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
           path: .merge-gate
           persist-credentials: false
       - id: assess
@@ -50,7 +55,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           MERGE_GATE_CONFIG: ${{ github.workspace }}/base/.github/merge-gate.json
-        run: python3 -m merge_gate assess "$RUNNER_TEMP/merge-gate-input"
+        run: python3 -s -E -m merge_gate assess "$RUNNER_TEMP/merge-gate-input"
       - if: steps.assess.outputs.skip == 'false'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
@@ -69,6 +74,11 @@ jobs:
     outputs:
       review_json: ${{ steps.claude.outputs.structured_output }}
     steps:
+      - name: Gate identity and a fresh HOME
+        env:
+          GATE_REPO: ${{ job.workflow_repository }}
+          GATE_SHA: ${{ job.workflow_sha }}
+        run: test -n "$GATE_REPO" && test -n "$GATE_SHA" && mkdir "$RUNNER_TEMP/home" && echo "HOME=$RUNNER_TEMP/home" >> "$GITHUB_ENV"
       # The default branch sits at the root; PR code is only read, from pr-head, never run.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -80,8 +90,8 @@ jobs:
           persist-credentials: false
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          repository: loutab4k/merge-gate
-          ref: ${{ inputs.gate_ref }}
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
           path: .merge-gate
           persist-credentials: false
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
@@ -90,11 +100,11 @@ jobs:
           path: .merge-gate-input
       - id: prompt
         working-directory: .merge-gate
-        run: python3 -m merge_gate.prompt >> "$GITHUB_OUTPUT"
+        run: python3 -s -E -m merge_gate.prompt >> "$GITHUB_OUTPUT"
       - id: bun
         timeout-minutes: 5
         working-directory: .merge-gate
-        run: python3 -m merge_gate.bun "$RUNNER_TEMP/bun" >> "$GITHUB_OUTPUT"
+        run: python3 -s -E -m merge_gate.bun "$RUNNER_TEMP/bun" >> "$GITHUB_OUTPUT"
       # dontAsk denies every call that would need approval: reads outside the working directory
       # and pr-head (such as /proc or the runner's files) and all tools but Read, Grep and Glob.
       - id: claude
@@ -111,7 +121,7 @@ jobs:
             --effort high
             --permission-mode dontAsk
             --add-dir pr-head
-            --disallowedTools Bash,Edit,Write,NotebookEdit,WebFetch,WebSearch,Task,Read(./.git/**),Read(./pr-head/.git/**)
+            --disallowedTools Bash,Edit,Write,NotebookEdit,WebFetch,WebSearch,Task,Read(./.git),Read(./.git/**),Read(./pr-head/.git),Read(./pr-head/.git/**)
             --json-schema '${{ steps.prompt.outputs.schema }}'
 
   report:
@@ -124,10 +134,15 @@ jobs:
       pull-requests: write
       issues: write
     steps:
+      - name: Gate identity and a fresh HOME
+        env:
+          GATE_REPO: ${{ job.workflow_repository }}
+          GATE_SHA: ${{ job.workflow_sha }}
+        run: test -n "$GATE_REPO" && test -n "$GATE_SHA" && mkdir "$RUNNER_TEMP/home" && echo "HOME=$RUNNER_TEMP/home" >> "$GITHUB_ENV"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          repository: loutab4k/merge-gate
-          ref: ${{ inputs.gate_ref }}
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
           path: .merge-gate
           persist-credentials: false
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
@@ -139,4 +154,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           REVIEW_JSON: ${{ needs.review.outputs.review_json }}
-        run: python3 -m merge_gate report "$RUNNER_TEMP/merge-gate-input"
+        run: python3 -s -E -m merge_gate report "$RUNNER_TEMP/merge-gate-input"

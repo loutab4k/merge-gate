@@ -22,11 +22,12 @@ SKIP_MARKERS = (
     ".Skip(",
     ".Skipf(",
     ".SkipNow(",
-    "//go:build ignore",
-    "// +build ignore",
+    # Any build constraint drops a test file from a plain `go test ./...` on some platform or tag set.
+    "//go:build",
+    "// +build",
     # Python
-    "pytest.mark.skip",
-    "pytest.mark.xfail",
+    "mark.skip",
+    "mark.xfail",
     "pytest.skip(",
     "pytest.xfail(",
     "pytest.importorskip(",
@@ -47,7 +48,7 @@ SKIP_MARKERS = (
     "#[ignore",
 )
 # Focus and skip functions, matched only as a whole name: `xit(` must not hit `exit(`, nor `fit(` `model.fit(`.
-SKIP_FUNCTIONS = ("xit(", "xdescribe(", "xtest(", "fit(", "fdescribe(")
+SKIP_FUNCTIONS = ("xit(", "xdescribe(", "xtest(", "fit(", "fdescribe(", "skip(")
 _SKIP = re.compile(
     "|".join(
         [re.escape(m) for m in SKIP_MARKERS]

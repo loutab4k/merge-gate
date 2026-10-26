@@ -1,16 +1,14 @@
-# Copy to .github/workflows/merge-gate.yml and set `workflows:` to the `name:` of the project's CI workflow.
+# Copy to .github/workflows/merge-gate.yml, set `workflows:` to the `name:` of the project's CI
+# workflow; the gate runs its own code from the commit `uses:` resolves to.
 name: merge-gate
 
 on:
   # Deliberate: the gate runs no PR code; see the threat model in the README.
-  workflow_run: # zizmor: ignore[dangerous-triggers]
+  workflow_run: # zizmor: ignore[dangerous-triggers] the gate never runs PR code
     workflows: [ci]
     types: [completed]
 
-permissions:
-  contents: read
-  pull-requests: write
-  issues: write
+permissions: {}
 
 # Keyed on the head repository too, so a fork branch with the same name cannot cancel this run.
 concurrency:
@@ -21,8 +19,13 @@ jobs:
   gate:
     # Fork PRs are never candidates; skip them before any runner starts.
     if: github.event.workflow_run.head_repository.full_name == github.repository
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    # Or pin the commit SHA of tag v1, as zizmor's unpinned-uses audit asks.
     uses: loutab4k/merge-gate/.github/workflows/gate.yml@v1
     # with:
-    #   runner: my-self-hosted-label
+    #   runner: a self-hosted label whose runner never runs PR code
     secrets:
       claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}

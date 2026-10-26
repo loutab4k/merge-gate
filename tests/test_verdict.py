@@ -71,6 +71,8 @@ def test_parse_review_rejects_anything_off_schema():
         json.dumps({**GOOD, "findings": [{"severity": "nit", "file": "", "summary": "", "real": "blocker"}]}),
         json.dumps({**GOOD, "criteria": [{"criterion": "x", "met": True, "evidence": "", "note": ""}]}),
         json.dumps({**GOOD, "findings": [{"severity": ["nit"], "file": "", "summary": ""}]}),
+        json.dumps(GOOD).replace('"confidence": 9', '"confidence": 9' + "0" * 5000),
+        "[" * 100_000 + "]" * 100_000,
     ]:
         assert parse_review(bad) is None, bad
 

@@ -16,11 +16,11 @@ A PR opened after its push CI already finished gets a verdict on its next push.
 
 ## Threat model
 
-Everything a PR supplies is untrusted: file contents, paths, the diff, the title and the description. The gate triggers on `workflow_run`, which has the base repository's secrets, so it never executes PR code: assess and report only call the GitHub API, and review only reads the PR head as files. The Claude token sits in the review job, where the model reads untrusted text; that model has no shell, no write tools and no web tools, cannot read outside the checkouts or into `.git`, and the job's GitHub token can only read. The remaining risk is a PR that talks the reviewer into a wrong verdict (published attacks on LLM reviewers succeed often). The deterministic checks in assess run first and cannot be argued with, and in shadow mode a wrong verdict is only a wrong comment.
+Everything a PR supplies is untrusted: file contents, paths, the diff, the title and the description. The gate triggers on `workflow_run`, which has the base repository's secrets, so it never executes PR code: assess and report only call the GitHub API, and review only reads the PR head as files. Each job uses a fresh `HOME` and runs Python with `-s -E`, so files left in a shared runner's home cannot inject code; a runner that also runs CI can still leave a process behind, hence the dedicated runner above. The Claude token sits in the review job, where the model reads untrusted text; that model has no shell, no write tools and no web tools, cannot read outside the checkouts or into `.git`, and the job's GitHub token can only read. The remaining risk is a PR that talks the reviewer into a wrong verdict (published attacks on LLM reviewers succeed often). The deterministic checks in assess run first and cannot be argued with, and in shadow mode a wrong verdict is only a wrong comment.
 
 ## Set up a project
 
-1. Copy [`examples/merge-gate.yml`](examples/merge-gate.yml) to `.github/workflows/merge-gate.yml` and set `workflows:` to the `name:` of the project's CI workflow. On a self-hosted runner, pass its label as `runner`; the runner needs `python3` and `curl` on Linux x86-64.
+1. Copy [`examples/merge-gate.yml`](examples/merge-gate.yml) to `.github/workflows/merge-gate.yml` and set `workflows:` to the `name:` of the project's CI workflow. On a self-hosted runner, pass its label as `runner`: use a runner that never runs PR code (not the one CI uses), because a runner that keeps state between jobs would hand the Claude token to whatever a PR left behind. The runner needs `python3` and `curl` on Linux x86-64.
 2. Add `.github/merge-gate.json` on the default branch:
 
    ```json

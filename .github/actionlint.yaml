@@ -1,0 +1,5 @@
+paths:
+  .github/workflows/gate.yml:
+    ignore:
+      # job.workflow_* is documented by GitHub but unknown to actionlint 1.7.12 (rhysd/actionlint#757).
+      - property "workflow_(repository|sha)" is not defined
