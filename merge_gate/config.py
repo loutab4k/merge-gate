@@ -9,12 +9,13 @@ from .globs import Glob, compile_glob
 # Paths that steer CI or the gate; a project can add to them, never remove them.
 BUILTIN_CRITICAL = (".github/**",)
 # Agent instructions and config. A PR that edits them is never reviewed: the reviewer would load the
-# PR head's skills, commands and agents through `--add-dir`.
+# PR head's skills, commands and agents through `--add-dir`. `**/.claude` alone is a symlink, which
+# git and GitHub list as one file.
 AGENT_CONFIG = (
     "**/CLAUDE.md",
     "**/CLAUDE.local.md",
     "**/AGENTS.md",
-    ".claude/**",
+    "**/.claude",
     "**/.claude/**",
     ".mcp.json",
 )

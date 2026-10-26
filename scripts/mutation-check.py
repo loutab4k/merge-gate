@@ -28,6 +28,7 @@ MUTANTS = [
     ("merge_gate/assess.py", "((ReasonCode.AGENT_CONFIG, config.agent_config), ", "("),
     ("merge_gate/config.py", "compile_glob(p, ignore_case=True) for p in AGENT_CONFIG", "compile_glob(p) for p in AGENT_CONFIG"),
     ("merge_gate/config.py", '    "**/.claude/**",\n', ""),
+    ("merge_gate/config.py", '    "**/.claude",\n', ""),
     ("merge_gate/verdict.py", '"merge" if verdict.review.merge else "manual"', '"merge"'),
     ("merge_gate/assess.py", "startswith(config.agent_branch_prefixes)", "startswith(config.agent_branch_prefixes[0])"),
     ("merge_gate/verdict.py", 'if not review.criteria and not deps:', "if False:"),

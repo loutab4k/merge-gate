@@ -47,6 +47,8 @@ def test_agent_config_routes_to_a_human_without_a_review():
         ".mcp.json",
         "pkg/claude.md",
         ".Claude/commands/x.md",
+        ".claude",
+        "sub/.claude",
     ]:
         a = run(files=[changed(path)])
         assert codes(a) == {ReasonCode.AGENT_CONFIG} and not a.needs_review, path
