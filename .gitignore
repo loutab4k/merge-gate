@@ -1,0 +1,4 @@
+.local-status.md
+__pycache__/
+.hypothesis/
+.pytest_cache/

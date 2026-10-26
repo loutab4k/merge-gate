@@ -1,0 +1,128 @@
+name: merge-gate
+
+on:
+  workflow_call:
+    inputs:
+      config:
+        description: Gate config path, read from the default branch
+        type: string
+        default: .github/merge-gate.json
+      gate_ref:
+        description: Ref of loutab4k/merge-gate whose code runs; keep it equal to the ref in `uses:`
+        type: string
+        default: v1
+      model:
+        type: string
+        default: claude-opus-5-5
+    secrets:
+      claude_code_oauth_token:
+        required: false
+
+jobs:
+  assess:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      skip: ${{ steps.assess.outputs.skip }}
+      needs_review: ${{ steps.assess.outputs.needs_review }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: base
+          persist-credentials: false
+          sparse-checkout: ${{ inputs.config }}
+          sparse-checkout-cone-mode: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: loutab4k/merge-gate
+          ref: ${{ inputs.gate_ref }}
+          path: .merge-gate
+          persist-credentials: false
+      - id: assess
+        working-directory: .merge-gate
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          MERGE_GATE_CONFIG: ${{ github.workspace }}/base/${{ inputs.config }}
+        run: python3 -m merge_gate assess "$RUNNER_TEMP/merge-gate-input"
+      - if: steps.assess.outputs.skip == 'false'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: merge-gate-input
+          path: ${{ runner.temp }}/merge-gate-input
+          retention-days: 7
+
+  review:
+    needs: assess
+    if: needs.assess.outputs.needs_review == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      review_json: ${{ steps.claude.outputs.structured_output }}
+    steps:
+      # The base branch sits at the root; PR code is only read, from pr-head, never run.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          path: pr-head
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: loutab4k/merge-gate
+          ref: ${{ inputs.gate_ref }}
+          path: .merge-gate
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: merge-gate-input
+          path: .merge-gate-input
+      - id: prompt
+        working-directory: .merge-gate
+        run: python3 -m merge_gate.prompt >> "$GITHUB_OUTPUT"
+      - id: claude
+        uses: anthropics/claude-code-action@925afb53776cf1a2b738c6bdbed37b4d4000ef13 # v1.0.262
+        with:
+          claude_code_oauth_token: ${{ secrets.claude_code_oauth_token }}
+          github_token: ${{ github.token }}
+          allowed_bots: dependabot[bot],renovate[bot]
+          prompt: ${{ steps.prompt.outputs.prompt }}
+          claude_args: >-
+            --model ${{ inputs.model }}
+            --effort high
+            --add-dir pr-head
+            --allowedTools Read,Grep,Glob
+            --disallowedTools Bash,Edit,Write,NotebookEdit,WebFetch,WebSearch,Task
+            --json-schema '${{ steps.prompt.outputs.schema }}'
+
+  report:
+    needs: [assess, review]
+    if: always() && needs.assess.result == 'success' && needs.assess.outputs.skip == 'false'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      pull-requests: write
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: loutab4k/merge-gate
+          ref: ${{ inputs.gate_ref }}
+          path: .merge-gate
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: merge-gate-input
+          path: ${{ runner.temp }}/merge-gate-input
+      - working-directory: .merge-gate
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          REVIEW_JSON: ${{ needs.review.outputs.review_json }}
+        run: python3 -m merge_gate report "$RUNNER_TEMP/merge-gate-input"

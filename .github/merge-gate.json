@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "mode": "shadow",
+  "owner": "loutab4k",
+  "critical_paths": ["merge_gate/**", "prompts/**", "requirements-dev.txt"]
+}
