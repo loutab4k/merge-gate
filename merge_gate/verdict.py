@@ -120,16 +120,21 @@ class Verdict:
         return not self.reasons
 
 
-def decide(assessment: Assessment, review: Review | None) -> Verdict:
-    """Every assessment reason stays; a reviewed PR adds the review's own reasons."""
+def decide(assessment: Assessment, review: Review | None, review_error: str = "") -> Verdict:
+    """Every assessment reason stays; a reviewed PR adds the review's own reasons. `review_error`
+    says why the review step failed, when it did."""
     if not assessment.needs_review:
         return Verdict(assessment, None, assessment.reasons)
-    return Verdict(assessment, review, assessment.reasons + _review_reasons(assessment, review))
+    return Verdict(
+        assessment, review, assessment.reasons + _review_reasons(assessment, review, review_error)
+    )
 
 
-def _review_reasons(assessment: Assessment, review: Review | None) -> tuple[Reason, ...]:
+def _review_reasons(
+    assessment: Assessment, review: Review | None, review_error: str
+) -> tuple[Reason, ...]:
     if review is None:
-        return (Reason(ReasonCode.NO_REVIEW, "no valid review output"),)
+        return (Reason(ReasonCode.NO_REVIEW, review_error or "no valid review output"),)
     reasons = []
     if not review.merge:
         reasons.append(Reason(ReasonCode.REVIEW_MANUAL, "the reviewer asked for a human"))
@@ -186,7 +191,7 @@ def render_comment(verdict: Verdict, run_url: str) -> str:
     ]
     if verdict.reasons:
         lines += ["", "**Why a human:**"]
-        lines += [f"- `{r.code.value}`: {_neutral(r.detail, 200)}" for r in verdict.reasons]
+        lines += [f"- `{r.code.value}`: {_neutral(r.detail, 300)}" for r in verdict.reasons]
     if verdict.review is not None:
         r = verdict.review
         lines += ["", f"**Review** (confidence {r.confidence}/10): {_neutral(r.summary)}"]

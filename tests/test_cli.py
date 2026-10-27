@@ -3,8 +3,11 @@ import json
 import pytest
 
 from merge_gate import __main__ as cli
+from merge_gate import failure
 from merge_gate.github import GitHub
 from merge_gate.verdict import MARKER
+
+from .test_failure import RECORDED, execution
 
 SHA = "b" * 40
 REPO = "owner/proj"
@@ -124,6 +127,44 @@ def run_report(env, monkeypatch, comments, review):
     monkeypatch.setenv("REVIEW_JSON", review)
     assert cli.main(["x", "report", str(work)]) == 0
     return [(m, p, b) for m, p, b, _ in fake.calls if m != "GET"]
+
+
+def failed_review_comment(env, monkeypatch, tmp_path, messages):
+    """The review job's failure step, then report with its output, as gate.yml wires them."""
+    path = tmp_path / "claude-execution-output.json"
+    path.write_text(json.dumps(messages))
+    step_output = tmp_path / "failure-step-output"
+    monkeypatch.setenv("GITHUB_OUTPUT", str(step_output))
+    failure.main(["x", str(path)])
+    (line,) = step_output.read_text().splitlines()
+    key, reason = line.split("=", 1)
+    assert key == "reason"
+    monkeypatch.setenv("REVIEW_FAILURE", reason)
+    (write,) = run_report(env, monkeypatch, [], "")
+    return reason, write[2]["body"]
+
+
+def test_a_failed_review_puts_its_reason_in_the_comment(env, monkeypatch, tmp_path):
+    reason, body = failed_review_comment(env, monkeypatch, tmp_path, RECORDED)
+    assert reason == "subtype success, is_error true: Claude AI usage limit reached|1761523200"
+    assert f"- `no-review`: `{reason}`" in body.split("\n")
+    assert "PROMPT-TEXT" not in body and "DIFF-LINE" not in body
+
+
+def test_a_hostile_failure_reason_stays_inert(env, monkeypatch, tmp_path):
+    hostile = "@owner ```\n::error::x\n![p](https://evil.test/p.png) <img src=x> `"
+    messages = execution({"subtype": "success", "is_error": True, "result": hostile})
+    _, body = failed_review_comment(env, monkeypatch, tmp_path, messages)
+    (line,) = [l for l in body.split("\n") if "evil.test" in l]
+    span = line.split(": ", 1)[1]
+    assert line.startswith("- `no-review`: ") and span.startswith("`") and span.endswith("`") and span.count("`") == 2
+    assert "evil.test" not in body.split("```json\n")[1] and "\n::error::" not in body
+
+
+def test_a_review_that_failed_without_a_reason_says_no_valid_output(env, monkeypatch):
+    monkeypatch.delenv("REVIEW_FAILURE", raising=False)
+    (write,) = run_report(env, monkeypatch, [], "")
+    assert "- `no-review`: `no valid review output`" in write[2]["body"].split("\n")
 
 
 def test_report_edits_only_its_own_comment(env, monkeypatch):

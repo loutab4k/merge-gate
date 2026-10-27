@@ -73,6 +73,7 @@ jobs:
       pull-requests: read
     outputs:
       review_json: ${{ steps.claude.outputs.structured_output }}
+      failure_reason: ${{ steps.failure.outputs.reason }}
     steps:
       - name: Gate identity and a fresh HOME
         env:
@@ -126,6 +127,16 @@ jobs:
             --add-dir pr-head
             --disallowedTools Bash,Edit,Write,NotebookEdit,WebFetch,WebSearch,Task,Read(./.git),Read(./.git/**),Read(./pr-head/.git),Read(./pr-head/.git/**)
             --json-schema '${{ steps.prompt.outputs.schema }}'
+      # The action logs no error text. This logs the final result's subtype, is_error and error text
+      # and hands report one line of it; never the prompt or the diff. The text is untrusted, so it
+      # travels only through env and job outputs, never into a run: line.
+      - id: failure
+        if: failure() && steps.claude.outcome == 'failure'
+        timeout-minutes: 2
+        working-directory: .merge-gate
+        env:
+          EXECUTION_FILE: ${{ steps.claude.outputs.execution_file }}
+        run: python3 -s -E -m merge_gate.failure "$EXECUTION_FILE"
 
   report:
     needs: [assess, review]
@@ -157,4 +168,5 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           REVIEW_JSON: ${{ needs.review.outputs.review_json }}
+          REVIEW_FAILURE: ${{ needs.review.outputs.failure_reason }}
         run: python3 -s -E -m merge_gate report "$RUNNER_TEMP/merge-gate-input"

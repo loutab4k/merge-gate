@@ -81,7 +81,7 @@ def cmd_assess(out_dir: Path) -> int:
 def cmd_report(out_dir: Path) -> int:
     a = _assessment_from_json((out_dir / "assessment.json").read_text())
     review = parse_review(os.environ.get("REVIEW_JSON", "")) if a.needs_review else None
-    verdict = decide(a, review)
+    verdict = decide(a, review, os.environ.get("REVIEW_FAILURE", ""))
     run_url = (
         f"{os.environ['GITHUB_SERVER_URL']}/{os.environ['GITHUB_REPOSITORY']}"
         f"/actions/runs/{os.environ['GITHUB_RUN_ID']}"
