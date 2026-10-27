@@ -11,3 +11,8 @@ Enforced by: judgment; the auto-mode classifier refused it once
 One line is not enough: the runner also runs legacy `##[command]` text found anywhere in a line, so print it between `::stop-commands::<random token>` and `::<token>::`.
 Evidence: 2026-10-27, the failure-reason step claimed "no workflow command" after checking only `::`; both round-1 reviewers reproduced `##[add-mask]` from actions/runner `ActionCommand.TryParse` (`IndexOf`).
 Enforced by: `tests/test_failure.py` for `merge_gate/failure.py`; judgment for new steps
+
+## When you write which review-checklist triggers fire
+Run the checklist's path and diff `rg` commands literally over the whole diff, recorded fixtures included, and report what they hit; never judge from the code alone.
+Evidence: 2026-10-28, #5's round-1 self-check said "no trigger fires"; the reviewer ran the commands and `token`, `role` and `secrets.` hit `tests/fixtures/hindsight/merge-gate.json`.
+Enforced by: judgment
