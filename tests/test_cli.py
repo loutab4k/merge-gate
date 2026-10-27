@@ -151,6 +151,12 @@ def test_a_failed_review_puts_its_reason_in_the_comment(env, monkeypatch, tmp_pa
     assert "PROMPT-TEXT" not in body and "DIFF-LINE" not in body
 
 
+def test_a_full_length_reason_reaches_the_comment_whole(env, monkeypatch, tmp_path):
+    messages = execution({"subtype": "success", "is_error": True, "result": "e" * 1000})
+    reason, body = failed_review_comment(env, monkeypatch, tmp_path, messages)
+    assert len(reason) == 300 and f"- `no-review`: `{reason}`" in body.split("\n")
+
+
 def test_a_hostile_failure_reason_stays_inert(env, monkeypatch, tmp_path):
     hostile = "@owner ```\n::error::x\n![p](https://evil.test/p.png) <img src=x> `"
     messages = execution({"subtype": "success", "is_error": True, "result": hostile})

@@ -34,13 +34,28 @@ def run_main(tmp_path, monkeypatch, capsys, content):
     return capsys.readouterr().out, out.read_text()
 
 
+def logged_reason(log):
+    """The reason line, which must sit between a stop-commands line and its resume line."""
+    stop, line, resume = log.split("\n")[:-1]
+    token = stop.removeprefix("::stop-commands::")
+    assert len(token) == 32 and resume == f"::{token}::" and token not in line
+    return line
+
+
 def test_a_recorded_error_result_gives_its_text_and_nothing_else(tmp_path, monkeypatch, capsys):
     log, output = run_main(tmp_path, monkeypatch, capsys, json.dumps(RECORDED))
     reason = f"subtype success, is_error true: {LIMIT_TEXT}"
-    assert log == f"merge-gate: review failed: {reason}\n"
+    assert logged_reason(log) == f"merge-gate: review failed: {reason}"
     assert output == f"reason={reason}\n"
     for text in (log, output):
         assert "PROMPT-TEXT" not in text and "DIFF-LINE" not in text
+
+
+def test_legacy_workflow_commands_in_the_reason_are_logged_with_commands_stopped(tmp_path, monkeypatch, capsys):
+    text = "API Error: 400 ##[add-mask]subtype ##[warning file=README.md]x"
+    messages = execution({"subtype": "success", "is_error": True, "result": text})
+    log, _ = run_main(tmp_path, monkeypatch, capsys, json.dumps(messages))
+    assert logged_reason(log).endswith(text)
 
 
 def test_error_subtypes_give_their_errors():
@@ -63,7 +78,7 @@ def test_a_missing_or_broken_file_says_so(tmp_path, monkeypatch, capsys):
 
 def test_a_long_error_is_cut_to_the_limit():
     reason = failure.failure_reason(execution({"subtype": "success", "is_error": True, "result": "x" * 5000}))
-    assert len(reason) == failure.LIMIT and reason.startswith("subtype success, is_error true: xxx")
+    assert len(reason) == 300 and reason.startswith("subtype success, is_error true: xxx")
 
 
 def test_control_characters_never_reach_the_line():
@@ -93,7 +108,7 @@ def test_the_reason_is_always_one_short_printable_line(subtype, text, errors):
         {"subtype": subtype, "result": errors},
     ):
         reason = failure.failure_reason(execution(result))
-        assert len(reason) <= failure.LIMIT and reason.isprintable() and reason == reason.strip()
+        assert len(reason) <= 300 and reason.isprintable() and reason == reason.strip()
 
 
 @given(hostile_json)

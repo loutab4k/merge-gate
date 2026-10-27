@@ -3,15 +3,16 @@
 The action logs only a sanitized result (subtype, is_error, cost), so a failed review would show no
 cause. The file holds every message, the prompt and the diff included; this reads only the final
 result message. Its text comes from the model or the API and may echo PR content, so the reason is
-one printable line: it cannot start a workflow command or add a `$GITHUB_OUTPUT` key.
+one printable line, which cannot add a `$GITHUB_OUTPUT` key, logged with workflow commands stopped.
 """
 
 import json
 import os
+import secrets
 import sys
 from pathlib import Path
 
-LIMIT = 300
+from .verdict import REASON_LIMIT
 
 
 def _line(text: str) -> str:
@@ -37,7 +38,7 @@ def failure_reason(messages) -> str:
             reason += ": " + "; ".join(e for e in errors if isinstance(e, str))
     else:
         reason += ": no structured output"
-    return _line(reason)[:LIMIT].rstrip()
+    return _line(reason)[:REASON_LIMIT].rstrip()
 
 
 def reason_from_file(path: str) -> str:
@@ -56,7 +57,10 @@ def reason_from_file(path: str) -> str:
 
 def main(argv: list[str]) -> int:
     reason = reason_from_file(argv[1] if len(argv) > 1 else "")
-    print(f"merge-gate: review failed: {reason}")
+    # The runner also runs legacy `##[command]` text found anywhere in a line, so the reason is
+    # printed with workflow commands stopped; the random token cannot appear in it.
+    token = secrets.token_hex(16)
+    print(f"::stop-commands::{token}\nmerge-gate: review failed: {reason}\n::{token}::")
     with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as out:
         out.write(f"reason={reason}\n")
     return 0

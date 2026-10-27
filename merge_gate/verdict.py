@@ -9,6 +9,7 @@ MARKER = "<!-- merge-gate:v1 -->"
 MIN_CONFIDENCE = 8
 BLOCKING = frozenset({"blocker", "major"})
 SEVERITIES = ("blocker", "major", "minor", "nit")
+REASON_LIMIT = 300
 
 REVIEW_SCHEMA = {
     "type": "object",
@@ -191,7 +192,7 @@ def render_comment(verdict: Verdict, run_url: str) -> str:
     ]
     if verdict.reasons:
         lines += ["", "**Why a human:**"]
-        lines += [f"- `{r.code.value}`: {_neutral(r.detail, 300)}" for r in verdict.reasons]
+        lines += [f"- `{r.code.value}`: {_neutral(r.detail, REASON_LIMIT)}" for r in verdict.reasons]
     if verdict.review is not None:
         r = verdict.review
         lines += ["", f"**Review** (confidence {r.confidence}/10): {_neutral(r.summary)}"]
