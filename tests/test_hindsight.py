@@ -58,6 +58,7 @@ def test_each_outcome_from_its_deterministic_evidence(tmp_path):
         120: "clean",
         130: "reverted",  # git revert -m 1 in a merge-commit repo: only the branch commit says so
         140: "ambiguous",  # names the PR and changed its lines, but no fix in the title
+        150: "ambiguous",  # a stacked PR carries 150's own in-branch revert; not a revert of 150
     }
     kinds = {r["pr"]: r["manual_kind"] for r in rows if r["verdict"] == "manual"}
     assert kinds == {20: "rule", 110: "review", 120: "no-review"}
@@ -87,7 +88,7 @@ def test_rerun_is_byte_identical_and_asks_the_model_once(tmp_path):
     args = ["--repo", REPO, "--as-of", AS_OF.isoformat()]
     out, rows = run(tmp_path, responses, *args, run_model=model)
     first = {p.name: p.read_bytes() for p in out.iterdir() if p.is_file()}
-    assert len(calls) == 2  # PRs 40 and 140
+    assert len(calls) == 3  # PRs 40, 140 and 150
     assert "Later PR #41" in calls[0] and "Extend b" in calls[0]
     row = next(r for r in rows if r["pr"] == 40)
     assert row["label"] == "model-bad" and row["bad"] and (out / row["grade_file"]).exists()

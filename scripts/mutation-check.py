@@ -75,7 +75,9 @@ MUTANTS = [
     ("hindsight/history.py", '"startup_failure"})', '"startup_failure", "cancelled"})'),
     ("hindsight/history.py", "own_commits = {pull.merge_sha} | {", "own_commits = {pull.merge_sha} or {"),
     ("hindsight/label.py", "if l.overlap_files and l.fix_title", "if l.overlap_files"),
-    ("hindsight/history.py", "messages = [merge_message, later.body] + [", "messages = [merge_message, later.body] or ["),
+    ("hindsight/history.py", 'messages = [c["commit"]["message"] for c in branch if c["sha"] not in own_commits]', 'messages = []'),
+    ("hindsight/history.py", ' for c in branch if c["sha"] not in own_commits]', " for c in branch]"),
+    ("hindsight/history.py", "for m in (merge_message, later.body)):", "for m in ()):"),
     ("hindsight/label.py", "if as_of < facts.window_end:", "if False:"),
     ("hindsight/report.py", "if reasons == {ReasonCode.NO_REVIEW.value}:", "if False:"),
 ]

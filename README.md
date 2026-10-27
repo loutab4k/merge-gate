@@ -56,7 +56,7 @@ This repository runs the gate on its own PRs through `.github/workflows/merge-ga
 
 Each merged PR gets the first label that applies, from what merged into its base within three days (`--window-days`):
 
-- `reverted`: a later PR is GitHub's revert of it, or says `This reverts commit <its commit>` in its merge commit, description or branch commits.
+- `reverted`: a later PR is GitHub's revert of it, names its merge commit after `This reverts commit` in the merge message or description, or has a branch commit of its own that reverts one of the PR's commits.
 - `main-red`: a push run on its merge commit failed.
 - `fixed-soon`: a later PR whose title says fix, bug, regression, broken or typo changed lines the PR wrote (GitHub blame at the later PR's parent).
 - `pending`: the window is still open.

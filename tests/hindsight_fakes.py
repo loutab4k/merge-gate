@@ -146,7 +146,19 @@ def scenario() -> FakeRepo:
     r.merged(141, T0 + 10 * day + hour, later, title="Add x, part 2", body="Follow-up to #140")
     r.blame(141, "b.py", [(5, 5, merge_sha(140))])
 
-    for n in (10, 30, 40, 50, 60, 70, 80, 90, 100, 130, 140):
+    # PR 151 is stacked on 150 and merged without a rebase: GitHub lists 150's branch commits among
+    # its own, and its squash message repeats 150's in-branch revert of its own first commit.
+    first, second = f"{150:039d}a", head_sha(150)
+    in_branch = [{"sha": first, "commit": {"message": "try"}},
+                 {"sha": second, "commit": {"message": f'Revert "try"\n\nThis reverts commit {first}.'}}]
+    r.merged(150, T0 + 11 * day, own)
+    r.responses[f"PAGES repos/{REPO}/pulls/150/commits?per_page=100"] = [in_branch]
+    r.merged(151, T0 + 11 * day + hour, readd, title="Add y", message=f"Add y\n\n* This reverts commit {first}.")
+    r.responses[f"PAGES repos/{REPO}/pulls/151/commits?per_page=100"] = [
+        in_branch + [{"sha": head_sha(151), "commit": {"message": "Add y"}}]
+    ]
+
+    for n in (10, 30, 40, 50, 60, 70, 80, 90, 100, 130, 140, 150):
         r.comment(n, comment_body(n))
     r.comment(20, comment_body(20, critical=True, review=None))
     r.comment(110, comment_body(110, review={**GOOD_REVIEW, "verdict": "manual", "confidence": 6}))

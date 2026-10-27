@@ -161,16 +161,19 @@ class History:
         )
 
     def _reverts(self, pull: Pull, later: Pull, merge_message: str, own_commits: set[str]) -> bool:
-        """GitHub's revert button (title and body), or `git revert`'s line in the squash message, the
-        PR body or, in a merge-commit repo, a commit on the later PR's branch. A revert always touches
-        the PR's files, so only a later PR that shares one is asked."""
+        """GitHub's revert button (title and body); `git revert` of the PR's merge commit named in the
+        later merge message or body; or a later branch commit reverting any of the PR's commits. The
+        PR's own commits are skipped: a PR stacked on it lists them, in-branch reverts included, and
+        a squash message repeats them. A revert always touches the PR's files, so only a later PR
+        that shares one is asked."""
         if later.title == f'Revert "{pull.title}"':
             return True
         if re.search(rf"\bReverts {re.escape(self.repo)}#{pull.number}\b", later.body):
             return True
-        messages = [merge_message, later.body] + [
-            c["commit"]["message"] for c in self.gh.pages(f"repos/{self.repo}/pulls/{later.number}/commits?per_page=100")
-        ]
+        if any(f"This reverts commit {pull.merge_sha}" in m for m in (merge_message, later.body)):
+            return True
+        branch = self.gh.pages(f"repos/{self.repo}/pulls/{later.number}/commits?per_page=100")
+        messages = [c["commit"]["message"] for c in branch if c["sha"] not in own_commits]
         return any(f"This reverts commit {sha}" in m for sha in own_commits for m in messages)
 
     def _blamed(self, oid: str, path: str, lines: list[int], commits: set[str]) -> bool:
