@@ -53,6 +53,16 @@ MUTANTS = [
     ("merge_gate/assess.py", '    "//go:build",\n', ""),
     ("merge_gate/assess.py", '"fdescribe(", "skip(")', '"fdescribe(")'),
     ("merge_gate/verdict.py", "except (ValueError, RecursionError):", "except json.JSONDecodeError:"),
+    ("merge_gate/failure.py", 'c if c.isprintable() else " "', "c"),
+    ("merge_gate/failure.py", "[:REASON_LIMIT]", ""),
+    ("merge_gate/failure.py", 'print(f"::stop-commands::{token}\\n', 'print(f"'),
+    ("merge_gate/failure.py", 'if is_error or subtype != "success":', "if True:"),
+    ("merge_gate/failure.py", "results[-1]", "results[0]"),
+    ("merge_gate/failure.py", 'm.get("type") == "result"', "True"),
+    ("merge_gate/verdict.py", 'review_error or "no valid review output"', '"no valid review output"'),
+    ("merge_gate/__main__.py", 'os.environ.get("REVIEW_FAILURE", "")', '""'),
+    ("merge_gate/verdict.py", "{_neutral(r.detail, REASON_LIMIT)}", "{r.detail}"),
+    ("merge_gate/verdict.py", "REASON_LIMIT = 300", "REASON_LIMIT = 200"),
 ]
 
 failed = 0
