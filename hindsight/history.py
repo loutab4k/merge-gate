@@ -9,9 +9,9 @@ from .gh import Gh
 # A failed push run on the merge commit; `cancelled` is left out (a newer push cancels it).
 RED = frozenset({"failure", "timed_out", "startup_failure"})
 HUNK = re.compile(r"@@ -([0-9]+)(?:,[0-9]+)? \+[0-9]+(?:,[0-9]+)? @@")
-# A later PR's title that says it repairs something. Line overlap alone also catches planned
-# evolution: merge-gate#3 rewrote mutants that #1 wrote, for #3's own code change.
-FIX_TITLE = re.compile(r"\b(?:fix(?:es|ed)?|hotfix|bug(?:fix)?|regression|broken?|typo)\b", re.IGNORECASE)
+# A later PR's title that says it repairs something. Line overlap alone, or with a mention of the
+# PR, also catches planned evolution: merge-gate#3 rewrote mutants that #1 wrote, for its own change.
+FIX_TITLE = re.compile(r"\b(?:fix(?:es|ed|ing)?|hotfix|bug(?:s|fix)?|regressions?|broken?|typo)\b", re.IGNORECASE)
 
 
 @dataclass(frozen=True)
@@ -140,12 +140,6 @@ class History:
             changed = commit["files"]
         else:
             changed = self.gh.get(f"repos/{self.repo}/compare/{parent}...{later.merge_sha}")["files"]
-        message = commit["commit"]["message"]
-        reverts = (
-            any(f"This reverts commit {sha}" in message for sha in own_commits)
-            or later.title == f'Revert "{pull.title}"'
-            or re.search(rf"\bReverts {re.escape(self.repo)}#{pull.number}\b", later.body) is not None
-        )
         shared, overlap, patches = [], [], []
         for f in changed:
             old_path = f.get("previous_filename", f["filename"])
@@ -158,13 +152,26 @@ class History:
                 overlap.append(f["filename"])
         return Later(
             pull=later,
-            reverts=reverts,
+            reverts=bool(shared) and self._reverts(pull, later, commit["commit"]["message"], own_commits),
             names_pr=names(f"{later.title}\n{later.body}", self.repo, pull.number),
             fix_title=FIX_TITLE.search(later.title) is not None,
             shared_files=tuple(sorted(shared)),
             overlap_files=tuple(sorted(overlap)),
             patches=tuple(sorted(patches)),
         )
+
+    def _reverts(self, pull: Pull, later: Pull, merge_message: str, own_commits: set[str]) -> bool:
+        """GitHub's revert button (title and body), or `git revert`'s line in the squash message, the
+        PR body or, in a merge-commit repo, a commit on the later PR's branch. A revert always touches
+        the PR's files, so only a later PR that shares one is asked."""
+        if later.title == f'Revert "{pull.title}"':
+            return True
+        if re.search(rf"\bReverts {re.escape(self.repo)}#{pull.number}\b", later.body):
+            return True
+        messages = [merge_message, later.body] + [
+            c["commit"]["message"] for c in self.gh.pages(f"repos/{self.repo}/pulls/{later.number}/commits?per_page=100")
+        ]
+        return any(f"This reverts commit {sha}" in m for sha in own_commits for m in messages)
 
     def _blamed(self, oid: str, path: str, lines: list[int], commits: set[str]) -> bool:
         ranges = self.gh.blame(self.repo, oid, path)

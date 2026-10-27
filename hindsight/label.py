@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 
+from .grade import Grade
 from .history import RED, Facts, Later, Pull
 
 
@@ -52,7 +53,7 @@ def label(facts: Facts, as_of: datetime) -> Outcome:
     fixed = [
         Evidence("fixed-its-lines", l.pull.url, ", ".join(l.overlap_files))
         for l in facts.later
-        if l.overlap_files and (l.names_pr or l.fix_title)
+        if l.overlap_files and l.fix_title
     ]
     if fixed:
         return Outcome(Label.FIXED_SOON, tuple(fixed))
@@ -60,6 +61,14 @@ def label(facts: Facts, as_of: datetime) -> Outcome:
     if as_of < facts.window_end:
         return Outcome(Label.PENDING, related)
     return Outcome(Label.AMBIGUOUS, related) if related else Outcome(Label.CLEAN)
+
+
+def graded(ambiguous: Outcome, grade: Grade, facts: Facts) -> Outcome:
+    """A model grade settles an ambiguous outcome; a bad one keeps only the PR the model named."""
+    if not grade.bad:
+        return Outcome(Label.MODEL_CLEAN, ambiguous.evidence)
+    fix = next(l for l in facts.later if l.pull.number == grade.evidence)
+    return Outcome(Label.MODEL_BAD, (Evidence("model-named-fix", fix.pull.url),))
 
 
 def _relation(later: Later) -> str:

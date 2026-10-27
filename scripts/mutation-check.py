@@ -74,7 +74,8 @@ MUTANTS = [
     ("hindsight/history.py", 'patch.split("\\n")', "patch.splitlines()"),
     ("hindsight/history.py", '"startup_failure"})', '"startup_failure", "cancelled"})'),
     ("hindsight/history.py", "own_commits = {pull.merge_sha} | {", "own_commits = {pull.merge_sha} or {"),
-    ("hindsight/label.py", "if l.overlap_files and (l.names_pr or l.fix_title)", "if l.overlap_files"),
+    ("hindsight/label.py", "if l.overlap_files and l.fix_title", "if l.overlap_files"),
+    ("hindsight/history.py", "messages = [merge_message, later.body] + [", "messages = [merge_message, later.body] or ["),
     ("hindsight/label.py", "if as_of < facts.window_end:", "if False:"),
     ("hindsight/report.py", "if reasons == {ReasonCode.NO_REVIEW.value}:", "if False:"),
 ]

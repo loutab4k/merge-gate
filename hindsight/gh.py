@@ -49,7 +49,10 @@ class Gh:
 
     def _fetch(self, key: str, args: list[str]):
         # GET is gh's default for `gh api` without fields; the GraphQL call is a query, never a mutation.
-        proc = subprocess.run(["gh", *args], capture_output=True, text=True, timeout=300)
+        try:
+            proc = subprocess.run(["gh", *args], capture_output=True, text=True, timeout=300)
+        except subprocess.TimeoutExpired:
+            raise GhError(f"gh {key} timed out") from None
         if proc.returncode != 0:
             raise GhError(f"gh {key} failed: {proc.stderr.strip()}")
         value = json.loads(proc.stdout)

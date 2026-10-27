@@ -1,6 +1,6 @@
 # merge-gate hindsight eval
 
-As of 2027-03-20T00:00:00+00:00, window 3 days, repos: owner/proj. 12 verdicts, 4 gate-marked comments skipped.
+As of 2027-03-20T00:00:00+00:00, window 3 days, repos: owner/proj. 14 verdicts, 4 gate-marked comments skipped.
 
 Bad outcome: reverted, main-red, fixed-soon or model-bad. Settled: bad, clean or model-clean. `pending`: merged less than the window ago with nothing bad yet. `ambiguous`: a related later PR that no deterministic rule settles and no model grade decided.
 
@@ -8,18 +8,18 @@ Bad outcome: reverted, main-red, fixed-soon or model-bad. Settled: bad, clean or
 
 | label | would-merge | manual |
 |---|---|---|
-| reverted | 2 | 0 |
+| reverted | 3 | 0 |
 | main-red | 0 | 1 |
 | fixed-soon | 2 | 0 |
 | pending | 1 | 0 |
-| ambiguous | 1 | 0 |
+| ambiguous | 2 | 0 |
 | clean | 1 | 2 |
 | closed-unmerged | 1 | 0 |
 | open | 1 | 0 |
 
 ## Would-merge followed by a bad outcome
 
-4 of 5 (80%) settled would-merge verdicts.
+5 of 6 (83%) settled would-merge verdicts.
 
 ## Manual verdicts
 
@@ -35,20 +35,20 @@ A manual verdict was needed when the PR still had a bad outcome. A `review` manu
 |---|---|---|---|---|---|---|---|
 | None | 2 | 0 | 0 | 2 | 1 | 1 | 0 |
 | manual | 1 | 0 | 0 | 1 | 0 | 1 | 0 |
-| merge | 9 | 9 | 4 | 0 | 0 | 0 | 4 |
+| merge | 11 | 11 | 5 | 0 | 0 | 0 | 5 |
 
 ## By class
 
 | class | verdicts | would-merge | would-merge then bad | manual | manual then bad | manual then clean | unsettled or unmerged |
 |---|---|---|---|---|---|---|---|
-| code | 12 | 9 | 4 | 3 | 1 | 2 | 4 |
+| code | 14 | 11 | 5 | 3 | 1 | 2 | 5 |
 
 ## By confidence
 
 | confidence | verdicts | would-merge | would-merge then bad | manual | manual then bad | manual then clean | unsettled or unmerged |
 |---|---|---|---|---|---|---|---|
 | 06 | 1 | 0 | 0 | 1 | 0 | 1 | 0 |
-| 09 | 9 | 9 | 4 | 0 | 0 | 0 | 4 |
+| 09 | 11 | 11 | 5 | 0 | 0 | 0 | 5 |
 | none | 2 | 0 | 0 | 2 | 1 | 1 | 0 |
 
 0 verdicts judged a head that is not the PR's final head.

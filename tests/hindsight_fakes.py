@@ -51,11 +51,14 @@ class FakeRepo:
         self.pulls.append(self._pull(n, None, state, "t", ""))
 
     def merged(self, n: int, at: datetime, files: list[dict], title: str = "Add x", body: str = "",
-               message: str | None = None, runs: tuple[str, ...] = (), two_parents: bool = False) -> None:
+               message: str | None = None, runs: tuple[str, ...] = (), two_parents: bool = False,
+               branch_message: str = "work") -> None:
         self.pulls.append(self._pull(n, at, "closed", title, body))
         base = f"repos/{REPO}"
         self.responses[f"PAGES {base}/pulls/{n}/files?per_page=100"] = [files]
-        self.responses[f"PAGES {base}/pulls/{n}/commits?per_page=100"] = [[{"sha": head_sha(n)}]]
+        self.responses[f"PAGES {base}/pulls/{n}/commits?per_page=100"] = [
+            [{"sha": head_sha(n), "commit": {"message": branch_message}}]
+        ]
         self.responses[f"GET {base}/actions/runs?head_sha={merge_sha(n)}&event=push&per_page=100"] = {
             "workflow_runs": [
                 {"id": i, "name": "check", "conclusion": c, "html_url": f"https://runs/{n}/{i}"}
@@ -112,7 +115,8 @@ def scenario() -> FakeRepo:
     hour = timedelta(hours=1)
 
     r.merged(10, T0, own)
-    r.merged(11, T0 + hour, [], title="Undo", message=f"Undo\n\nThis reverts commit {merge_sha(10)}.")
+    readd = [{"filename": "b.py", "status": "modified", "patch": "@@ -4,0 +5,1 @@\n+old"}]
+    r.merged(11, T0 + hour, readd, title="Undo", message=f"Undo\n\nThis reverts commit {merge_sha(10)}.")
     r.merged(20, T0 + day, own, runs=("success", "failure", "cancelled"))
     r.merged(30, T0 + 2 * day, own)
     r.merged(31, T0 + 2 * day + hour, later, title="Fix b parsing")
@@ -126,15 +130,23 @@ def scenario() -> FakeRepo:
     r.merged(80, T0 + 4 * day, own, runs=("success",))
     r.merged(81, T0 + 4 * day + hour, [{"filename": "z.py", "status": "added", "patch": "@@ -0,0 +1 @@\n+z"}])
     r.merged(90, T0 + 5 * day, own)
-    r.merged(91, T0 + 5 * day + hour, later, title="Repair b", body=f"Follow-up to #90", two_parents=True)
+    r.merged(91, T0 + 5 * day + hour, later, title="Fix b", two_parents=True)
     r.blame(91, "b.py", [(5, 5, head_sha(90))])
     r.merged(100, T0 + 6 * day, own)
-    r.merged(101, T0 + 6 * day + hour, [], title="Revert \"Add x\"", body=f"Reverts {REPO}#100")
+    r.merged(101, T0 + 6 * day + hour, readd, title="Revert \"Add x\"", body=f"Reverts {REPO}#100")
 
     r.merged(110, T0 + 7 * day, own)
     r.merged(120, T0 + 8 * day, own)
+    # A PR that only deleted a line, reverted with `git revert -m 1` in a merge-commit repo: the
+    # revert only adds lines, and only its branch commit says what it reverts.
+    r.merged(130, T0 + 9 * day, [{"filename": "b.py", "status": "modified", "patch": "@@ -5,1 +4,0 @@\n-old"}])
+    r.merged(131, T0 + 9 * day + hour, readd, title='Revert "Merge pull request #130 from owner/x"', two_parents=True,
+             branch_message=f'Revert "Merge pull request #130 from owner/x"\n\nThis reverts commit {merge_sha(130)}, reversing\nchanges.')
+    r.merged(140, T0 + 10 * day, own)
+    r.merged(141, T0 + 10 * day + hour, later, title="Add x, part 2", body="Follow-up to #140")
+    r.blame(141, "b.py", [(5, 5, merge_sha(140))])
 
-    for n in (10, 30, 40, 50, 60, 70, 80, 90, 100):
+    for n in (10, 30, 40, 50, 60, 70, 80, 90, 100, 130, 140):
         r.comment(n, comment_body(n))
     r.comment(20, comment_body(20, critical=True, review=None))
     r.comment(110, comment_body(110, review={**GOOD_REVIEW, "verdict": "manual", "confidence": 6}))

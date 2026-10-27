@@ -1,5 +1,6 @@
 import difflib
 import json
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -7,8 +8,8 @@ from hypothesis import given
 from hypothesis import strategies as st
 
 from hindsight.__main__ import main
-from hindsight.gh import Replay
-from hindsight.grade import HEADER, parse_grade
+from hindsight.gh import Gh, GhError, Replay
+from hindsight.grade import HEADER, parse_grade, run_claude
 from hindsight.history import names, removed_lines
 from hindsight.record import Shadow, Skipped, parse_comment
 
@@ -51,10 +52,12 @@ def test_each_outcome_from_its_deterministic_evidence(tmp_path):
         60: "closed-unmerged",
         70: "open",
         80: "clean",  # the only later PR touches other files
-        90: "fixed-soon",  # merge commit: blame names the PR's own commit, and the fix names #90
+        90: "fixed-soon",  # merge commit: blame names the PR's own branch commit
         100: "reverted",  # GitHub's revert button: Revert "<title>" / Reverts owner/proj#100
         110: "clean",
         120: "clean",
+        130: "reverted",  # git revert -m 1 in a merge-commit repo: only the branch commit says so
+        140: "ambiguous",  # names the PR and changed its lines, but no fix in the title
     }
     kinds = {r["pr"]: r["manual_kind"] for r in rows if r["verdict"] == "manual"}
     assert kinds == {20: "rule", 110: "review", 120: "no-review"}
@@ -84,9 +87,12 @@ def test_rerun_is_byte_identical_and_asks_the_model_once(tmp_path):
     args = ["--repo", REPO, "--as-of", AS_OF.isoformat()]
     out, rows = run(tmp_path, responses, *args, run_model=model)
     first = {p.name: p.read_bytes() for p in out.iterdir() if p.is_file()}
-    assert len(calls) == 1 and "Later PR #41" in calls[0] and "Extend b" in calls[0]
+    assert len(calls) == 2  # PRs 40 and 140
+    assert "Later PR #41" in calls[0] and "Extend b" in calls[0]
     row = next(r for r in rows if r["pr"] == 40)
     assert row["label"] == "model-bad" and row["bad"] and (out / row["grade_file"]).exists()
+    assert row["grade_confidence"] == 8
+    assert row["evidence"] == [{"kind": "model-named-fix", "url": f"https://github.com/{REPO}/pull/41", "detail": ""}]
 
     def no_model(prompt):
         raise AssertionError("the cached answer should be reused")
@@ -106,8 +112,30 @@ def test_rerun_is_byte_identical_and_asks_the_model_once(tmp_path):
     ],
 )
 def test_model_grade_only_counts_when_it_parses(tmp_path, answer, label):
-    _, rows = run(tmp_path, scenario().build(), "--repo", REPO, "--as-of", AS_OF.isoformat(), run_model=lambda p: answer)
-    assert next(r for r in rows if r["pr"] == 40)["label"] == label
+    out, rows = run(tmp_path, scenario().build(), "--repo", REPO, "--as-of", AS_OF.isoformat(), run_model=lambda p: answer)
+    row = next(r for r in rows if r["pr"] == 40)
+    assert row["label"] == label
+    # A failed call leaves nothing on disk, so the row points at no file.
+    assert (row["grade_file"] is None) == (answer is None)
+    assert row["grade_file"] is None or (out / row["grade_file"]).exists()
+
+
+@pytest.mark.parametrize("error", [subprocess.TimeoutExpired("claude", 900), FileNotFoundError("claude")])
+def test_a_model_call_that_cannot_finish_is_no_answer(monkeypatch, error):
+    def fail(*args, **kwargs):
+        raise error
+
+    monkeypatch.setattr(subprocess, "run", fail)
+    assert run_claude("opus")("prompt") is None
+
+
+def test_a_gh_timeout_is_a_gh_error(monkeypatch):
+    def slow(*args, **kwargs):
+        raise subprocess.TimeoutExpired("gh", 300)
+
+    monkeypatch.setattr(subprocess, "run", slow)
+    with pytest.raises(GhError, match="timed out"):
+        Gh().get("repos/owner/proj")
 
 
 def test_untrusted_text_cannot_close_its_fence(tmp_path):

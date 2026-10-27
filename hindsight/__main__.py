@@ -13,7 +13,7 @@ from pathlib import Path
 from .gh import Gh, GhError
 from .grade import Grader, run_claude
 from .history import History, Pull
-from .label import Label, Outcome, label, unmerged
+from .label import Label, graded, label, unmerged
 from .record import Shadow, Skipped, is_gate_comment, parse_comment
 from .report import Row, dataset, summary
 
@@ -54,13 +54,12 @@ def evaluate(gh: Gh, repos: list[str], as_of: datetime, window_days: int, grader
                 continue
             facts = history.facts(pull)
             outcome = label(facts, as_of)
-            grade_file = None
+            grade, path = None, None
             if outcome.label is Label.AMBIGUOUS and grader is not None:
                 grade, path = grader.grade(repo, facts)
-                grade_file = f"grades/{path.name}"
                 if grade is not None:
-                    outcome = Outcome(Label.MODEL_BAD if grade.bad else Label.MODEL_CLEAN, outcome.evidence)
-            rows.append(Row(s, pull, outcome, grade_file))
+                    outcome = graded(outcome, grade, facts)
+            rows.append(Row(s, pull, outcome, f"grades/{path.name}" if path else None, grade and grade.confidence))
     return rows, skipped
 
 

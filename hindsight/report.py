@@ -31,6 +31,7 @@ class Row:
     pull: Pull
     outcome: Outcome
     grade_file: str | None = None
+    grade_confidence: int | None = None
 
     @property
     def manual_kind(self) -> str | None:
@@ -67,6 +68,7 @@ class Row:
             "settled": o.label in SETTLED,
             "evidence": [{"kind": e.kind, "url": e.url, "detail": e.detail} for e in o.evidence],
             "grade_file": self.grade_file,
+            "grade_confidence": self.grade_confidence,
         }
 
 

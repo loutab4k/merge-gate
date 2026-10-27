@@ -2574,6 +2574,338 @@
    }
   ]
  ],
+ "PAGES repos/loutab4k/merge-gate/pulls/3/commits?per_page=100": [
+  [
+   {
+    "author": {
+     "avatar_url": "https://avatars.githubusercontent.com/u/169377334?v=4",
+     "events_url": "https://api.github.com/users/loutab4k/events{/privacy}",
+     "followers_url": "https://api.github.com/users/loutab4k/followers",
+     "following_url": "https://api.github.com/users/loutab4k/following{/other_user}",
+     "gists_url": "https://api.github.com/users/loutab4k/gists{/gist_id}",
+     "gravatar_id": "",
+     "html_url": "https://github.com/loutab4k",
+     "id": 169377334,
+     "login": "loutab4k",
+     "node_id": "U_kgDOChh-Ng",
+     "organizations_url": "https://api.github.com/users/loutab4k/orgs",
+     "received_events_url": "https://api.github.com/users/loutab4k/received_events",
+     "repos_url": "https://api.github.com/users/loutab4k/repos",
+     "site_admin": false,
+     "starred_url": "https://api.github.com/users/loutab4k/starred{/owner}{/repo}",
+     "subscriptions_url": "https://api.github.com/users/loutab4k/subscriptions",
+     "type": "User",
+     "url": "https://api.github.com/users/loutab4k",
+     "user_view_type": "public"
+    },
+    "comments_url": "https://api.github.com/repos/loutab4k/merge-gate/commits/d98b11dd258db43090622a461367a239b7c1b43b/comments",
+    "commit": {
+     "author": {
+      "date": "2026-10-26T14:50:30Z",
+      "email": "169377334+loutab4k@users.noreply.github.com",
+      "name": "loutab4k"
+     },
+     "comment_count": 0,
+     "committer": {
+      "date": "2026-10-26T14:50:30Z",
+      "email": "169377334+loutab4k@users.noreply.github.com",
+      "name": "loutab4k"
+     },
+     "message": "Review PRs on critical paths too; allow several agent branch prefixes\n\nA PR whose only finding is a critical path now gets the model review,\nand the verdict stays \"needs a human\" whatever the review says, so\nshadow mode measures the reviewer on the riskiest PRs. Any other\nassessment reason still skips the review. The config key\n`agent_branch_prefix` becomes the list `agent_branch_prefixes`\n(default `[\"ai/\"]`), so a project can also accept `claude/` branches.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>",
+     "tree": {
+      "sha": "3a50683055bdb86277fe87191a50aaba1e94fc59",
+      "url": "https://api.github.com/repos/loutab4k/merge-gate/git/trees/3a50683055bdb86277fe87191a50aaba1e94fc59"
+     },
+     "url": "https://api.github.com/repos/loutab4k/merge-gate/git/commits/d98b11dd258db43090622a461367a239b7c1b43b",
+     "verification": {
+      "payload": null,
+      "reason": "unsigned",
+      "signature": null,
+      "verified": false,
+      "verified_at": null
+     }
+    },
+    "committer": {
+     "avatar_url": "https://avatars.githubusercontent.com/u/169377334?v=4",
+     "events_url": "https://api.github.com/users/loutab4k/events{/privacy}",
+     "followers_url": "https://api.github.com/users/loutab4k/followers",
+     "following_url": "https://api.github.com/users/loutab4k/following{/other_user}",
+     "gists_url": "https://api.github.com/users/loutab4k/gists{/gist_id}",
+     "gravatar_id": "",
+     "html_url": "https://github.com/loutab4k",
+     "id": 169377334,
+     "login": "loutab4k",
+     "node_id": "U_kgDOChh-Ng",
+     "organizations_url": "https://api.github.com/users/loutab4k/orgs",
+     "received_events_url": "https://api.github.com/users/loutab4k/received_events",
+     "repos_url": "https://api.github.com/users/loutab4k/repos",
+     "site_admin": false,
+     "starred_url": "https://api.github.com/users/loutab4k/starred{/owner}{/repo}",
+     "subscriptions_url": "https://api.github.com/users/loutab4k/subscriptions",
+     "type": "User",
+     "url": "https://api.github.com/users/loutab4k",
+     "user_view_type": "public"
+    },
+    "html_url": "https://github.com/loutab4k/merge-gate/commit/d98b11dd258db43090622a461367a239b7c1b43b",
+    "node_id": "C_kwDOVX88o9oAKGQ5OGIxMWRkMjU4ZGI0MzA5MDYyMmE0NjEzNjdhMjM5YjdjMWI0M2I",
+    "parents": [
+     {
+      "html_url": "https://github.com/loutab4k/merge-gate/commit/769264c1284fab7359efb9f706d23491d20d0693",
+      "sha": "769264c1284fab7359efb9f706d23491d20d0693",
+      "url": "https://api.github.com/repos/loutab4k/merge-gate/commits/769264c1284fab7359efb9f706d23491d20d0693"
+     }
+    ],
+    "sha": "d98b11dd258db43090622a461367a239b7c1b43b",
+    "url": "https://api.github.com/repos/loutab4k/merge-gate/commits/d98b11dd258db43090622a461367a239b7c1b43b"
+   },
+   {
+    "author": {
+     "avatar_url": "https://avatars.githubusercontent.com/u/169377334?v=4",
+     "events_url": "https://api.github.com/users/loutab4k/events{/privacy}",
+     "followers_url": "https://api.github.com/users/loutab4k/followers",
+     "following_url": "https://api.github.com/users/loutab4k/following{/other_user}",
+     "gists_url": "https://api.github.com/users/loutab4k/gists{/gist_id}",
+     "gravatar_id": "",
+     "html_url": "https://github.com/loutab4k",
+     "id": 169377334,
+     "login": "loutab4k",
+     "node_id": "U_kgDOChh-Ng",
+     "organizations_url": "https://api.github.com/users/loutab4k/orgs",
+     "received_events_url": "https://api.github.com/users/loutab4k/received_events",
+     "repos_url": "https://api.github.com/users/loutab4k/repos",
+     "site_admin": false,
+     "starred_url": "https://api.github.com/users/loutab4k/starred{/owner}{/repo}",
+     "subscriptions_url": "https://api.github.com/users/loutab4k/subscriptions",
+     "type": "User",
+     "url": "https://api.github.com/users/loutab4k",
+     "user_view_type": "public"
+    },
+    "comments_url": "https://api.github.com/repos/loutab4k/merge-gate/commits/30a1e54189553a243053b86b472dcbf67e6d9154/comments",
+    "commit": {
+     "author": {
+      "date": "2026-10-26T14:59:33Z",
+      "email": "169377334+loutab4k@users.noreply.github.com",
+      "name": "loutab4k"
+     },
+     "comment_count": 0,
+     "committer": {
+      "date": "2026-10-26T14:59:33Z",
+      "email": "169377334+loutab4k@users.noreply.github.com",
+      "name": "loutab4k"
+     },
+     "message": "Never review a PR that edits agent config; record the reviewer's own verdict\n\nThe review session loads skills, commands and agents from pr-head/.claude through --add-dir, so agent config gets its own reason that skips the review. The comment record gains review: merge | manual | null for shadow analysis.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>",
+     "tree": {
+      "sha": "3990161a81fca245e12380b4c8b90ffbd55d05bb",
+      "url": "https://api.github.com/repos/loutab4k/merge-gate/git/trees/3990161a81fca245e12380b4c8b90ffbd55d05bb"
+     },
+     "url": "https://api.github.com/repos/loutab4k/merge-gate/git/commits/30a1e54189553a243053b86b472dcbf67e6d9154",
+     "verification": {
+      "payload": null,
+      "reason": "unsigned",
+      "signature": null,
+      "verified": false,
+      "verified_at": null
+     }
+    },
+    "committer": {
+     "avatar_url": "https://avatars.githubusercontent.com/u/169377334?v=4",
+     "events_url": "https://api.github.com/users/loutab4k/events{/privacy}",
+     "followers_url": "https://api.github.com/users/loutab4k/followers",
+     "following_url": "https://api.github.com/users/loutab4k/following{/other_user}",
+     "gists_url": "https://api.github.com/users/loutab4k/gists{/gist_id}",
+     "gravatar_id": "",
+     "html_url": "https://github.com/loutab4k",
+     "id": 169377334,
+     "login": "loutab4k",
+     "node_id": "U_kgDOChh-Ng",
+     "organizations_url": "https://api.github.com/users/loutab4k/orgs",
+     "received_events_url": "https://api.github.com/users/loutab4k/received_events",
+     "repos_url": "https://api.github.com/users/loutab4k/repos",
+     "site_admin": false,
+     "starred_url": "https://api.github.com/users/loutab4k/starred{/owner}{/repo}",
+     "subscriptions_url": "https://api.github.com/users/loutab4k/subscriptions",
+     "type": "User",
+     "url": "https://api.github.com/users/loutab4k",
+     "user_view_type": "public"
+    },
+    "html_url": "https://github.com/loutab4k/merge-gate/commit/30a1e54189553a243053b86b472dcbf67e6d9154",
+    "node_id": "C_kwDOVX88o9oAKDMwYTFlNTQxODk1NTNhMjQzMDUzYjg2YjQ3MmRjYmY2N2U2ZDkxNTQ",
+    "parents": [
+     {
+      "html_url": "https://github.com/loutab4k/merge-gate/commit/d98b11dd258db43090622a461367a239b7c1b43b",
+      "sha": "d98b11dd258db43090622a461367a239b7c1b43b",
+      "url": "https://api.github.com/repos/loutab4k/merge-gate/commits/d98b11dd258db43090622a461367a239b7c1b43b"
+     }
+    ],
+    "sha": "30a1e54189553a243053b86b472dcbf67e6d9154",
+    "url": "https://api.github.com/repos/loutab4k/merge-gate/commits/30a1e54189553a243053b86b472dcbf67e6d9154"
+   },
+   {
+    "author": {
+     "avatar_url": "https://avatars.githubusercontent.com/u/169377334?v=4",
+     "events_url": "https://api.github.com/users/loutab4k/events{/privacy}",
+     "followers_url": "https://api.github.com/users/loutab4k/followers",
+     "following_url": "https://api.github.com/users/loutab4k/following{/other_user}",
+     "gists_url": "https://api.github.com/users/loutab4k/gists{/gist_id}",
+     "gravatar_id": "",
+     "html_url": "https://github.com/loutab4k",
+     "id": 169377334,
+     "login": "loutab4k",
+     "node_id": "U_kgDOChh-Ng",
+     "organizations_url": "https://api.github.com/users/loutab4k/orgs",
+     "received_events_url": "https://api.github.com/users/loutab4k/received_events",
+     "repos_url": "https://api.github.com/users/loutab4k/repos",
+     "site_admin": false,
+     "starred_url": "https://api.github.com/users/loutab4k/starred{/owner}{/repo}",
+     "subscriptions_url": "https://api.github.com/users/loutab4k/subscriptions",
+     "type": "User",
+     "url": "https://api.github.com/users/loutab4k",
+     "user_view_type": "public"
+    },
+    "comments_url": "https://api.github.com/repos/loutab4k/merge-gate/commits/a202309443d253d04c9d617db1b99c2368ee4e9b/comments",
+    "commit": {
+     "author": {
+      "date": "2026-10-26T15:06:24Z",
+      "email": "169377334+loutab4k@users.noreply.github.com",
+      "name": "loutab4k"
+     },
+     "comment_count": 0,
+     "committer": {
+      "date": "2026-10-26T15:06:24Z",
+      "email": "169377334+loutab4k@users.noreply.github.com",
+      "name": "loutab4k"
+     },
+     "message": "Treat a .claude symlink as agent config\n\ngit and GitHub list a symlink as one file, so .claude or sub/.claude alone matched no glob and a PR could point the reviewer's skill directories at its own files.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>",
+     "tree": {
+      "sha": "bf4a75f8e18ece1f1e7a9920a7c23da06d68d92b",
+      "url": "https://api.github.com/repos/loutab4k/merge-gate/git/trees/bf4a75f8e18ece1f1e7a9920a7c23da06d68d92b"
+     },
+     "url": "https://api.github.com/repos/loutab4k/merge-gate/git/commits/a202309443d253d04c9d617db1b99c2368ee4e9b",
+     "verification": {
+      "payload": null,
+      "reason": "unsigned",
+      "signature": null,
+      "verified": false,
+      "verified_at": null
+     }
+    },
+    "committer": {
+     "avatar_url": "https://avatars.githubusercontent.com/u/169377334?v=4",
+     "events_url": "https://api.github.com/users/loutab4k/events{/privacy}",
+     "followers_url": "https://api.github.com/users/loutab4k/followers",
+     "following_url": "https://api.github.com/users/loutab4k/following{/other_user}",
+     "gists_url": "https://api.github.com/users/loutab4k/gists{/gist_id}",
+     "gravatar_id": "",
+     "html_url": "https://github.com/loutab4k",
+     "id": 169377334,
+     "login": "loutab4k",
+     "node_id": "U_kgDOChh-Ng",
+     "organizations_url": "https://api.github.com/users/loutab4k/orgs",
+     "received_events_url": "https://api.github.com/users/loutab4k/received_events",
+     "repos_url": "https://api.github.com/users/loutab4k/repos",
+     "site_admin": false,
+     "starred_url": "https://api.github.com/users/loutab4k/starred{/owner}{/repo}",
+     "subscriptions_url": "https://api.github.com/users/loutab4k/subscriptions",
+     "type": "User",
+     "url": "https://api.github.com/users/loutab4k",
+     "user_view_type": "public"
+    },
+    "html_url": "https://github.com/loutab4k/merge-gate/commit/a202309443d253d04c9d617db1b99c2368ee4e9b",
+    "node_id": "C_kwDOVX88o9oAKGEyMDIzMDk0NDNkMjUzZDA0YzlkNjE3ZGIxYjk5YzIzNjhlZTRlOWI",
+    "parents": [
+     {
+      "html_url": "https://github.com/loutab4k/merge-gate/commit/30a1e54189553a243053b86b472dcbf67e6d9154",
+      "sha": "30a1e54189553a243053b86b472dcbf67e6d9154",
+      "url": "https://api.github.com/repos/loutab4k/merge-gate/commits/30a1e54189553a243053b86b472dcbf67e6d9154"
+     }
+    ],
+    "sha": "a202309443d253d04c9d617db1b99c2368ee4e9b",
+    "url": "https://api.github.com/repos/loutab4k/merge-gate/commits/a202309443d253d04c9d617db1b99c2368ee4e9b"
+   },
+   {
+    "author": {
+     "avatar_url": "https://avatars.githubusercontent.com/u/169377334?v=4",
+     "events_url": "https://api.github.com/users/loutab4k/events{/privacy}",
+     "followers_url": "https://api.github.com/users/loutab4k/followers",
+     "following_url": "https://api.github.com/users/loutab4k/following{/other_user}",
+     "gists_url": "https://api.github.com/users/loutab4k/gists{/gist_id}",
+     "gravatar_id": "",
+     "html_url": "https://github.com/loutab4k",
+     "id": 169377334,
+     "login": "loutab4k",
+     "node_id": "U_kgDOChh-Ng",
+     "organizations_url": "https://api.github.com/users/loutab4k/orgs",
+     "received_events_url": "https://api.github.com/users/loutab4k/received_events",
+     "repos_url": "https://api.github.com/users/loutab4k/repos",
+     "site_admin": false,
+     "starred_url": "https://api.github.com/users/loutab4k/starred{/owner}{/repo}",
+     "subscriptions_url": "https://api.github.com/users/loutab4k/subscriptions",
+     "type": "User",
+     "url": "https://api.github.com/users/loutab4k",
+     "user_view_type": "public"
+    },
+    "comments_url": "https://api.github.com/repos/loutab4k/merge-gate/commits/8f921da667a414112c4aa6e63dbe0f152a681fae/comments",
+    "commit": {
+     "author": {
+      "date": "2026-10-26T15:12:07Z",
+      "email": "169377334+loutab4k@users.noreply.github.com",
+      "name": "loutab4k"
+     },
+     "comment_count": 0,
+     "committer": {
+      "date": "2026-10-26T15:12:07Z",
+      "email": "169377334+loutab4k@users.noreply.github.com",
+      "name": "loutab4k"
+     },
+     "message": "Load only user settings in the review session\n\n--setting-sources user keeps project skills, commands, agents, settings and CLAUDE.md of both checkouts out of the reviewer, so agent config reached through a default-branch symlink or an import cannot steer it.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>",
+     "tree": {
+      "sha": "a1d8fae9cc76d898c29624cd828a5bff18110982",
+      "url": "https://api.github.com/repos/loutab4k/merge-gate/git/trees/a1d8fae9cc76d898c29624cd828a5bff18110982"
+     },
+     "url": "https://api.github.com/repos/loutab4k/merge-gate/git/commits/8f921da667a414112c4aa6e63dbe0f152a681fae",
+     "verification": {
+      "payload": null,
+      "reason": "unsigned",
+      "signature": null,
+      "verified": false,
+      "verified_at": null
+     }
+    },
+    "committer": {
+     "avatar_url": "https://avatars.githubusercontent.com/u/169377334?v=4",
+     "events_url": "https://api.github.com/users/loutab4k/events{/privacy}",
+     "followers_url": "https://api.github.com/users/loutab4k/followers",
+     "following_url": "https://api.github.com/users/loutab4k/following{/other_user}",
+     "gists_url": "https://api.github.com/users/loutab4k/gists{/gist_id}",
+     "gravatar_id": "",
+     "html_url": "https://github.com/loutab4k",
+     "id": 169377334,
+     "login": "loutab4k",
+     "node_id": "U_kgDOChh-Ng",
+     "organizations_url": "https://api.github.com/users/loutab4k/orgs",
+     "received_events_url": "https://api.github.com/users/loutab4k/received_events",
+     "repos_url": "https://api.github.com/users/loutab4k/repos",
+     "site_admin": false,
+     "starred_url": "https://api.github.com/users/loutab4k/starred{/owner}{/repo}",
+     "subscriptions_url": "https://api.github.com/users/loutab4k/subscriptions",
+     "type": "User",
+     "url": "https://api.github.com/users/loutab4k",
+     "user_view_type": "public"
+    },
+    "html_url": "https://github.com/loutab4k/merge-gate/commit/8f921da667a414112c4aa6e63dbe0f152a681fae",
+    "node_id": "C_kwDOVX88o9oAKDhmOTIxZGE2NjdhNDE0MTEyYzRhYTZlNjNkYmUwZjE1MmE2ODFmYWU",
+    "parents": [
+     {
+      "html_url": "https://github.com/loutab4k/merge-gate/commit/a202309443d253d04c9d617db1b99c2368ee4e9b",
+      "sha": "a202309443d253d04c9d617db1b99c2368ee4e9b",
+      "url": "https://api.github.com/repos/loutab4k/merge-gate/commits/a202309443d253d04c9d617db1b99c2368ee4e9b"
+     }
+    ],
+    "sha": "8f921da667a414112c4aa6e63dbe0f152a681fae",
+    "url": "https://api.github.com/repos/loutab4k/merge-gate/commits/8f921da667a414112c4aa6e63dbe0f152a681fae"
+   }
+  ]
+ ],
  "PAGES repos/loutab4k/merge-gate/pulls/4/commits?per_page=100": [
   [
    {

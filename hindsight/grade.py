@@ -8,6 +8,7 @@ import hashlib
 import json
 import re
 import subprocess
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
@@ -18,7 +19,9 @@ HEADER = "## Hindsight grade"
 OUTCOME = re.compile(r"outcome: (fixed-later|clean)")
 CONFIDENCE = re.compile(r"confidence: (10|[0-9])")
 EVIDENCE = re.compile(r"evidence: (none|#[1-9][0-9]{0,6})")
-TITLE_LIMIT, BODY_LIMIT, PATCH_LIMIT = 200, 2000, 3000
+# Per text, per file patch and per PR's patches together: a prompt stays a few tens of thousands of
+# characters however many files the PRs touch.
+TITLE_LIMIT, BODY_LIMIT, PATCH_LIMIT, PATCHES_LIMIT = 200, 2000, 3000, 12000
 CLAUDE = ["claude", "-p", "--tools", "", "--safe-mode", "--strict-mcp-config", "--no-session-persistence", "--output-format", "text"]
 
 
@@ -54,8 +57,12 @@ def _fenced(text: str) -> str:
     return f"{fence}\n{text}\n{fence}"
 
 
+def _patches(patches: tuple[tuple[str, str], ...]) -> str:
+    return "\n".join(f"--- {path}\n{patch[:PATCH_LIMIT]}" for path, patch in patches)[:PATCHES_LIMIT]
+
+
 def _later_block(later: Later) -> str:
-    patches = "\n".join(f"--- {path}\n{patch[:PATCH_LIMIT]}" for path, patch in later.patches)
+    patches = _patches(later.patches)
     return "\n".join(
         [
             f"### Later PR #{later.pull.number}, merged {later.pull.merged_at:%Y-%m-%d %H:%M} UTC",
@@ -74,7 +81,7 @@ def _later_block(later: Later) -> str:
 
 def build_prompt(repo: str, facts: Facts) -> str:
     pull = facts.pull
-    own = "\n".join(f"--- {path}\n{patch[:PATCH_LIMIT]}" for path, patch in facts.own_patches)
+    own = _patches(facts.own_patches)
     return "\n\n".join(
         [
             "You grade, in hindsight, a pull request that a code reviewer judged before it merged. "
@@ -111,8 +118,15 @@ def build_prompt(repo: str, facts: Facts) -> str:
 def run_claude(model: str) -> Callable[[str], str | None]:
     def run(prompt: str) -> str | None:
         # No tools, no settings, hooks, plugins or MCP servers: the model only reads the prompt.
-        proc = subprocess.run([*CLAUDE, "--model", model], input=prompt, capture_output=True, text=True, timeout=900)
-        return proc.stdout if proc.returncode == 0 else None
+        try:
+            proc = subprocess.run([*CLAUDE, "--model", model], input=prompt, capture_output=True, text=True, timeout=900)
+        except (subprocess.TimeoutExpired, OSError) as e:
+            print(f"hindsight: model call failed: {e}", file=sys.stderr)
+            return None
+        if proc.returncode != 0:
+            print(f"hindsight: model call failed ({proc.returncode}): {proc.stderr.strip()[:500]}", file=sys.stderr)
+            return None
+        return proc.stdout
 
     return run
 
@@ -124,7 +138,8 @@ class Grader:
         self.directory = directory
         self.run = run
 
-    def grade(self, repo: str, facts: Facts) -> tuple[Grade | None, Path]:
+    def grade(self, repo: str, facts: Facts) -> tuple[Grade | None, Path | None]:
+        """The grade and the file holding the prompt and answer; no file when the model gave no answer."""
         prompt = build_prompt(repo, facts)
         digest = hashlib.sha256(prompt.encode()).hexdigest()[:16]
         path = self.directory / f"{repo.replace('/', '-')}-{facts.pull.number}-{digest}.json"
@@ -133,7 +148,7 @@ class Grader:
         else:
             answer = self.run(prompt)
             if answer is None:
-                return None, path
+                return None, None
             self.directory.mkdir(parents=True, exist_ok=True)
             tmp = path.with_suffix(".tmp")
             tmp.write_text(json.dumps({"prompt": prompt, "answer": answer}, indent=1))
