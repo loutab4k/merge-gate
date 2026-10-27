@@ -49,3 +49,20 @@ python3 -m venv .venv
 The mutation check breaks each safety check in turn and fails unless a test catches it; extend it with every new check.
 
 This repository runs the gate on its own PRs through `.github/workflows/merge-gate.yml`.
+
+## Hindsight eval
+
+`python3 -m hindsight` grades every shadow verdict by what happened to its PR afterwards, so the verdicts become an eval set. Run it on a machine where `gh` can read the repositories that call the gate (listed in `REPOS` in [`hindsight/__main__.py`](hindsight/__main__.py); `--repo` replaces the list). It only reads GitHub and writes `hindsight-out/dataset.jsonl` (one row per verdict, with its label and evidence links) and `hindsight-out/summary.md`. The output holds data of private repositories, so it stays out of Git.
+
+Each merged PR gets the first label that applies, from what merged into its base within three days (`--window-days`):
+
+- `reverted`: a later merge commit says `This reverts commit <its commit>`, or a later PR is GitHub's revert of it.
+- `main-red`: a push run on its merge commit failed.
+- `fixed-soon`: a later PR whose title says fix, bug, regression, broken or typo, or that names the PR, changed lines the PR wrote (GitHub blame at the later PR's parent).
+- `pending`: the window is still open.
+- `ambiguous`: a later PR names it, shares a file with it or changed its lines without a sign of a fix. With the model step these become `model-bad` or `model-clean`; `--no-model` leaves them.
+- `clean`: none of the above.
+
+Unmerged PRs are `open` or `closed-unmerged`. Only the comment the gate itself wrote counts, and its record must name the PR it sits on.
+
+The model step sends each ambiguous case to `claude -p` without tools, settings or MCP servers; its answer must end in a fixed grade section, and anything else leaves the case `ambiguous`. Prompts and answers stay in `hindsight-out/grades/`, so a rerun asks the model nothing new. Model grades are unvalidated: check a sample by hand before trusting them.

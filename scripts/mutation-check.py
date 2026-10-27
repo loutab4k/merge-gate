@@ -63,6 +63,20 @@ MUTANTS = [
     ("merge_gate/__main__.py", 'os.environ.get("REVIEW_FAILURE", "")', '""'),
     ("merge_gate/verdict.py", "{_neutral(r.detail, REASON_LIMIT)}", "{r.detail}"),
     ("merge_gate/verdict.py", "REASON_LIMIT = 300", "REASON_LIMIT = 200"),
+    ("hindsight/record.py", 'if comment["user"]["login"] != COMMENT_AUTHOR:', "if False:"),
+    ("hindsight/record.py", 'or int(issue[1]) != rec["pr"]', ""),
+    ("hindsight/record.py", "and SHA.fullmatch(rec[\"head\"]) is not None", ""),
+    ("hindsight/grade.py", "if bad != (pr is not None) or (pr is not None and pr not in later_numbers):", "if False:"),
+    ("hindsight/grade.py", "if len(lines) < 4 or lines[-4] != HEADER:", "if len(lines) < 4:"),
+    ("hindsight/grade.py", 'fence = "`" * max(3, run + 1)', 'fence = "```"'),
+    ("hindsight/history.py", "first <= n <= last and c in commits", "first <= n <= last"),
+    ("hindsight/history.py", "pull.merged_at < p.merged_at <= min(end, self.as_of)", "pull.merged_at < p.merged_at"),
+    ("hindsight/history.py", 'patch.split("\\n")', "patch.splitlines()"),
+    ("hindsight/history.py", '"startup_failure"})', '"startup_failure", "cancelled"})'),
+    ("hindsight/history.py", "own_commits = {pull.merge_sha} | {", "own_commits = {pull.merge_sha} or {"),
+    ("hindsight/label.py", "if l.overlap_files and (l.names_pr or l.fix_title)", "if l.overlap_files"),
+    ("hindsight/label.py", "if as_of < facts.window_end:", "if False:"),
+    ("hindsight/report.py", "if reasons == {ReasonCode.NO_REVIEW.value}:", "if False:"),
 ]
 
 failed = 0
